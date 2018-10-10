@@ -1,103 +1,96 @@
 
 import pandas as pd
-import math
 import numpy as np
 
-lamfile='lam.csv'
-lamHeader = ["id", "year", "day", "hour", "minute", "second","centisecond","length","lane","direction","class","speed","faulty","time", "interval", "start"]
+# summary file: amount of cars in speed classes (1-200 km/h) during one hour period
+summaryFile='lam.csv'
 
-#ajanjakso jolta tieto noudetaan
+# data fetched from this period
 fromDay=1
 fromYear=2017
-toDay=2
+toDay=1
 toYear=2017
-#alue
-area="01" #uusimaa
+
+# max speed under 200
 maxSpeed=200
 
-def writeFile(area, sensor, year, day):
-    address = "https://aineistot.liikennevirasto.fi/lam/rawdata/%d/%s/" % (year, area)
+# amount of sensors -in Uusimaa sensor ids between 1 and 1607
+amountOfSensors=1606
+
+# fetch data from liikennevirasto page
+def writeFile(sensor, year, day):
+    address = "https://aineistot.liikennevirasto.fi/lam/rawdata/%d/%s/" % (year, getAreaCode())
     fileName = "lamraw_%d_%d_%d.csv" % (sensor, year % 100, day)
-    
     path = "".join((address, fileName))
-    print(path)
-    print("loading %s ..." % fileName)
-
-
+    print("Loading %s ..." % fileName)
     try:
-        df = pd.read_csv(path, header = None, names = lamHeader, sep = ";")
+        #original lam file
+        df = pd.read_csv(path, header = None, names = getLamHeader(), sep = ";")
+        #cleaned data
         df2=cleanData(df)
-        df3=createDataframeForDay(df2)
-        df3.to_csv(lamfile)
-    except:
-        print("    Tiedosto puuttuu: "+fileName)
- 
-
-def createDataframeForDay(df):
-
-    counts = getAggregatesForDay(df)
-
-    h = np.arange(24)
-
-    df3 = pd.DataFrame()
-
-    df3['hour'] = h
-
-    df3['id']=df['id'][0]
-
-    for i in xrange(200):
-        colName = 'velocity%d' % (i + 1)
-        df3[colName] = counts[:, i]
-
-    print(df3)
-    return df3
+        #print(df2['speed'].max())
+        #summary data
+        df3=createDataframeForDay(df2) 
+        with open(summaryFile, 'a') as f:
+            df3.to_csv(f)
+    except: # all error cases 
+        print("   Tiedostoa ei löydy: "+fileName) # only area 01's sensors
     
+def getAreaCode():
+    return "01" #Uusimaa
 
-def getAggregatesForDay(df):
+def getLamHeader():
+    return ["id", "year", "day", "hour", "minute", "second","centisecond","length","lane","direction","class","speed","faulty","time", "interval", "start"]
 
-    counts = np.zeros((24, 200))
-
-    for h in range(0, 24):
-        df2=df.loc[df['hour']==h]
-        c = np.bincount(df2['speed'], minlength = 200)
-        c = c[: 200]
-
-        counts[h, :] = c
-
-    return counts
-        
-            
-def readFile():
-    df = pd.read_csv(lamfile, names=lamHeader)
-    return df
-
-def dataTofile():
-    for v in range(fromYear, toYear+1):#year
-        x=1
-        y=365
-        if v==fromYear: x=fromDay
-        if v==toYear: y=toDay
-        for s in range(1, 1607): #sensor
-            for d in range(x, y): #day
-                writeFile(area, s, v, d)
-                
 def cleanData(df):
     df2=df.dropna()
-    df3=df2.loc[df['faulty']==0] #validi havainto
+    df3=df2.loc[df['faulty']==0] #valid observation
     return df3
 
+# edit input & cleaned data to summary file format
+def createDataframeForDay(df):
+    counts = getAggregatesForDay(df)
+    h = np.arange(24) # 0-23
+    df2 = pd.DataFrame()
+    df2['hour'] = h
+    df2['day']=df['day'][0]
+    df2['id']=df['id'][0]
+    for i in range(0,maxSpeed): # indexes 0-199
+        colName = 'velocity%d' % (i+1) # speed 1-200
+        df2[colName] = counts[:, i] 
+    #print(df2)
+    return df2
+
+# calculate amount of cars in speed classes
+def getAggregatesForDay(df):
+    counts = np.zeros((24, maxSpeed)) # 0-23, 0-199
+    for h in range(0, 24): #0-23
+        df2=df.loc[df['hour']==h]
+        c = np.bincount(df2['speed'], minlength = maxSpeed) # 0-199
+        c = c[: maxSpeed]
+        counts[h, :] = c
+    return counts
+             
 def main():
     dataTofile()
     df=readFile()
-    #print(df.head(20))
-    #print(df.tail(20))
-    #print(np.unique(df['day']))
-    #print(df2['speed'].max())
-    #print(df2[df2['speed']==df2['speed'].max()])
-    #print(df2['speed'].mean())
-    #data=df2.groupby(['speed','hour'])['speed'].count()
-    #print(data.to_string())
-    
+    print(df.head(20))
+    print(df.tail(20))
 
+# fetch data from certain period
+def dataTofile():
+    for v in range(fromYear, toYear+1):#year
+        x=1
+        y=365+1
+        if v==fromYear: x=fromDay
+        if v==toYear: y=toDay+1
+        for s in range(1, amountOfSensors+1): #sensor
+            for d in range(x, y): #day
+                writeFile(s, v, d)
+                
+# read summary file
+def readFile():
+    df = pd.read_csv(summaryFile)
+    return df
     
 main()
