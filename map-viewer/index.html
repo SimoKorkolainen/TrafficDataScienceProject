@@ -1,0 +1,85 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Traffic Speeds</title>
+  <meta name="description" content="Map Viewer Test">
+  <meta name="author" content="">
+
+  <link rel="stylesheet" href="leaflet.css" />
+  <script src="leaflet.js"></script>
+  <script src="proj4.js"></script>
+  <script src="proj4leaflet.js"></script>
+  <script src="jquery-3.3.1.min.js"></script>
+</head>
+
+<body>
+  <div id="map" style="height: 600px;"></div>
+  <div id="details" style="height: 400px;"></div>
+  
+  <script>	  
+    var bounds, crsName, crsOpts, originNw, projDef, zoomLevels;
+    zoomLevels = [8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25];
+    crsName = 'EPSG:3067';
+    projDef = '+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs';
+    bounds = L.bounds(L.point(-548576, 6291456), L.point(1548576, 8388608));
+    //bounds = L.bounds(L.point(50199.4814, 6582464.0358), L.point(761274.6247, 7799839.8902));
+    //bounds = L.bounds(L.point(19.0900, 59.3000), L.point(31.5900, 70.1300));
+    originNw = L.point(bounds.min.x, bounds.max.y);
+    crsOpts = {
+        resolutions: zoomLevels,
+        bounds: bounds,
+        transformation: new L.Transformation(1, -originNw.x, -1, originNw.y)
+    };
+    var tm35 = new L.Proj.CRS(crsName, projDef, crsOpts);
+
+	var map = L.map('map', {'crs': tm35 } );
+	L.tileLayer('map_tiles/{z}/{x}_{y}.png', {
+		minZoom: 7,
+		maxZoom: 10,
+		tileSize: 1024,
+		attribution: 'Taustakarttasarja 15.9.2018 &copy; <a href="https://www.maanmittauslaitos.fi">Maanmittauslaitos</a>, ' +
+			'<a href="http://creativecommons.org/licenses/by/4.0/deed.fi">CC-BY 4.0</a>' ,
+		id: 'taustakartta'
+	}).addTo(map);
+	
+	L.control.scale().addTo(map);
+	
+	var yliopisto = L.marker([60.204722, 24.962778]).addTo(map);
+
+    map.setView([60.204722, 24.962778], 7);
+    
+    function onEachLAM(feature, layer) {
+		//var popupContent = "<p>LAM station: <b>" + feature.properties.names.en + "</b></p>";
+		//if (feature.properties && feature.properties.popupContent) {
+		//	popupContent += feature.properties.popupContent;
+		//}
+		//layer.bindPopup(popupContent);
+        var content = "";
+        if( ! feature.properties.names.en ) {
+            content = "<p>LAM station: <b>" + feature.properties.name + "</b></p>";
+        } else {
+            content = "<p>LAM station: <b>" + feature.properties.names.en + "</b></p>";
+        }
+        layer.on( 'click', function( e ) {
+            $('#details').html(content);
+        });
+    }
+    
+    var lam_points = new L.geoJson("", {onEachFeature: onEachLAM});
+	lam_points.addTo(map);
+
+	$.ajax({
+	dataType: "json",
+	url: "data/tms-stations-uusimaa.json",
+	success: function(data) {
+		$(data.features).each(function(key, data) {
+			lam_points.addData(data);
+		});
+	}
+	});
+  </script>
+</body>
+</html>
