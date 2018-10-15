@@ -26,7 +26,8 @@ class WeatherLoader:
 
 
         def readData(self, element, colNames):
-
+                if element is None:
+                        return pd.DataFrame(columns = colNames)
 	        info = element.text
 	
 
@@ -68,9 +69,19 @@ class WeatherLoader:
 
 
         def createQuery(self, firstDay, days):
+		lon = self.coordinates[0]
+		lat = self.coordinates[1]
+		lonUpper = lon + 0.03
+		lonLower = lon - 0.03
 
+		latUpper = lat + 0.03
+		latLower = lat - 0.03
+		lonLower = str(lonLower)
+		latLower = str(latLower)
+		lonUpper = str(lonUpper)
+		latUpper = str(latUpper)
 
-	        c = ",".join(self.coordinates * 2)
+	        c = ",".join((lonLower, latLower, lonUpper, latUpper))
 
 	        bbox = "bbox=%s" % c
 	       
@@ -101,10 +112,15 @@ class WeatherLoader:
                 return query
 
         def requestWFS(self, query):
+                contents = None
+                while contents is None:
 
-                       
-                contents = urllib2.urlopen(query)
-
+                        try:
+                                contents = urllib2.urlopen(query, timeout = 5)
+                        except Exception, e:
+                                print("Connection error: %s" % e)
+                            
+                        
 
                 tree = ElementTree.parse(contents)
 
@@ -136,9 +152,9 @@ class WeatherLoader:
 
                         query = self.createQuery(atDay, dayStep)
 
-
+                        print(query)
                         subData = self.requestWFS(query)
-
+                        print(subData.shape)
                    
 		        data = pd.concat((data, subData), axis = 0)
 
@@ -152,7 +168,7 @@ class WeatherLoader:
 
 
         def saveData(self, data):
-	        data.to_csv("weather_data_%s_%s.csv" % (self.coordinates[0].replace(".", "-"), self.coordinates[1].replace(".", "-")))
+	        data.to_csv("weather_data_%s_%s.csv" % (str(self.coordinates[0]).replace(".", "-"), str(self.coordinates[1]).replace(".", "-")))
 
 
 
@@ -188,13 +204,13 @@ def example():
 
 
         #coordinates = ["25.67087", "62.39758"]
-        coordinates = ["24.94459", "60.17523"] # [longitude, latitude]
+        coordinates = [24.94459, 60.17523] # [longitude, latitude]
 
         params = ["t2m", "ws_10min", "wg_10min", "wd_10min", "rh", "td", "r_1h", "ri_10min", "snow_aws", "vis", "n_man"]
 
         startDay = datetime.date(2016, 1, 1)
 
-        weeks = 20
+        weeks = 3
 
         loader = WeatherLoader(params, startDay, weeks, coordinates)
 
@@ -215,5 +231,5 @@ def example():
 
 
 
-example()
+#example()
 

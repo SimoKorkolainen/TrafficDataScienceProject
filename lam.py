@@ -1,6 +1,10 @@
 
 import pandas as pd
 import numpy as np
+import datetime
+import pytz
+import time
+
 
 # summary file: amount of cars in speed classes (1-200 km/h) during one hour period
 summaryFile='lam.csv'
@@ -15,26 +19,44 @@ toYear=2017
 maxSpeed=200
 
 # amount of sensors -in Uusimaa sensor ids between 1 and 1607
-amountOfSensors=1606
+#amountOfSensors=1606
+amountOfSensors = 10
+def readDataForDay(sensor, year, day):
+        try:
+            address = "https://aineistot.liikennevirasto.fi/lam/rawdata/%d/%s/" % (year, getAreaCode())
+            fileName = "lamraw_%d_%d_%d.csv" % (sensor, year % 100, day)
+            path = "".join((address, fileName))
+            print("Loading %s ..." % fileName)
+            #original lam file
+            df = pd.read_csv(path, header = None, names = getLamHeader(), sep = ";")
+            #cleaned data
+            df2=cleanData(df)
+            #print(df2['speed'].max())
+            #summary data
+            df3=createDataframeForDay(df2) 
+        except Exception, e: # all error cases 
+            print("Error: %s" % e)
+            return pd.DataFrame()
+        return df3
 
+def readData(sensor, startDate, days):
+    data = None
+    for i in range(days):
+        nextDate = datetime.datetime.fromordinal(startDate.toordinal() + i)
+        dayN = nextDate.toordinal() - datetime.datetime(nextDate.year, 1, 1).toordinal() + 1
+        data = pd.concat((data, readDataForDay(sensor, nextDate.year, dayN)), axis = 0)
+        
+    return data
 # fetch data from liikennevirasto page
 def writeFile(sensor, year, day):
-    address = "https://aineistot.liikennevirasto.fi/lam/rawdata/%d/%s/" % (year, getAreaCode())
-    fileName = "lamraw_%d_%d_%d.csv" % (sensor, year % 100, day)
-    path = "".join((address, fileName))
-    print("Loading %s ..." % fileName)
-    try:
-        #original lam file
-        df = pd.read_csv(path, header = None, names = getLamHeader(), sep = ";")
-        #cleaned data
-        df2=cleanData(df)
-        #print(df2['speed'].max())
-        #summary data
-        df3=createDataframeForDay(df2) 
-        with open(summaryFile, 'a') as f:
-            df3.to_csv(f)
-    except: # all error cases 
-        print("   Tiedostoa ei löydy: "+fileName) # only area 01's sensors
+        try:
+
+                df3 = readDataForDay(sensor, year, day) 
+
+                with open(summaryFile, 'a') as f:
+                        df3.to_csv(f)
+        except Exception, e: # all error cases 
+                print("Error: %s" % e)
     
 def getAreaCode():
     return "01" #Uusimaa
@@ -52,9 +74,31 @@ def createDataframeForDay(df):
     counts = getAggregatesForDay(df)
     h = np.arange(24) # 0-23
     df2 = pd.DataFrame()
+
+    year = 2000 + df['year'][0]
+    day = df['day'][0]
+    
+        
+    unixTime = np.zeros((len(h)), dtype = 'int')
+
+    for j in h:
+        date = datetime.datetime(year, 1, 1)
+        date = datetime.datetime.fromordinal(date.toordinal() + day - 1)
+        date = datetime.datetime(date.year, date.month, date.day, j)
+
+        finlandTime = pytz.timezone('Europe/Helsinki')
+
+        date = finlandTime.localize(date)        
+        date = pytz.utc.normalize(date)
+
+        unixTime[j] = int((date - datetime.datetime(1970, 1, 1, tzinfo = pytz.utc)).total_seconds())
+
+
+    df2['unixtime'] = unixTime
     df2['hour'] = h
-    df2['day']=df['day'][0]
-    df2['id']=df['id'][0]
+    df2['day'] = day
+    df2['id'] = df['id'][0]
+    df2['year'] = year
     for i in range(0,maxSpeed): # indexes 0-199
         colName = 'velocity%d' % (i+1) # speed 1-200
         df2[colName] = counts[:, i] 
@@ -77,6 +121,8 @@ def main():
     print(df.head(20))
     print(df.tail(20))
 
+
+
 # fetch data from certain period
 def dataTofile():
     for v in range(fromYear, toYear+1):#year
@@ -93,4 +139,4 @@ def readFile():
     df = pd.read_csv(summaryFile)
     return df
     
-main()
+#main()

@@ -54,10 +54,9 @@ def getNearestWeatherStation(coord, stationCoord):
 
 	X = getSphericalCoordinates(coord)
 	Y = getSphericalCoordinates(stationCoord)
-	print(X.shape)
-	print(Y.shape)
+
 	distToStation = cdist(X, Y)
-	print(distToStation.shape)
+
 	a = np.argmin(distToStation, axis = 1)
 
 	return a
@@ -94,11 +93,11 @@ def getTraficSensorCoordinates():
 
                                 coordinates.append([c[0], c[1]])
 
-                                sensorIds.append(j['id'])
+                                sensorIds.append(j['properties']['tmsNumber'])
 
         coordinates = np.asarray(coordinates)
 
-	return coordinates
+	return sensorIds, coordinates
 
 
 
@@ -107,7 +106,9 @@ def example():
 
 	stationCoord = np.asarray(stationCoord).astype('float')
 
-	sensorCoord = getTraficSensorCoordinates()
+	sensorId, sensorCoord = getTraficSensorCoordinates()
+        for k in sensorId:
+                print(k)
 
 	a = getNearestWeatherStation(sensorCoord, stationCoord)
 	u = np.unique(a)
@@ -116,7 +117,7 @@ def example():
 	for j in u:
 
 		print(names[j])
-
+                print(stationCoord[j, :])
 
 	plot.scatter(sensorCoord[:, 0], sensorCoord[:, 1], alpha = 0.5)
 	plot.scatter(stationCoord[u, 0], stationCoord[u, 1], c = 'red')
@@ -125,4 +126,4 @@ def example():
 
 
 
-example()
+#example()
