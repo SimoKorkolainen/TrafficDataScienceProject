@@ -25,8 +25,6 @@
     crsName = 'EPSG:3067';
     projDef = '+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs';
     bounds = L.bounds(L.point(-548576, 6291456), L.point(1548576, 8388608));
-    //bounds = L.bounds(L.point(50199.4814, 6582464.0358), L.point(761274.6247, 7799839.8902));
-    //bounds = L.bounds(L.point(19.0900, 59.3000), L.point(31.5900, 70.1300));
     originNw = L.point(bounds.min.x, bounds.max.y);
     crsOpts = {
         resolutions: zoomLevels,
@@ -47,7 +45,7 @@
 	
 	L.control.scale().addTo(map);
 	
-	var yliopisto = L.marker([60.204722, 24.962778]).addTo(map);
+	//var yliopisto = L.marker([60.204722, 24.962778]).addTo(map);
 
     map.setView([60.204722, 24.962778], 7);
     
