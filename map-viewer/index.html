@@ -16,8 +16,8 @@
 </head>
 
 <body>
-  <div id="map" style="height: 600px;"></div>
-  <div id="details" style="height: 400px;"></div>
+  <div id="map" style="height: 800px; width: 49%; display: inline-block;"></div>
+  <div id="details" style="height: 800px; width: 49%; display: inline-block;"></div>
   
   <script>	  
     var bounds, crsName, crsOpts, originNw, projDef, zoomLevels;
@@ -75,6 +75,32 @@
 	success: function(data) {
 		$(data.features).each(function(key, data) {
 			lam_points.addData(data);
+		});
+	}
+	});
+    
+    var predictionPointMarkerOptions = {
+        radius: 5,
+        fillColor: "#ff7854",
+        color: "#000",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
+    };
+    
+    var prediction_points = new L.geoJson("", {
+        pointToLayer: function (feature, latlng) {
+            return L.circleMarker(latlng, predictionPointMarkerOptions);
+        }
+    });
+	prediction_points.addTo(map);
+
+	$.ajax({
+	dataType: "json",
+	url: "data/prediction_points.json",
+	success: function(data) {
+		$(data.features).each(function(key, data) {
+			prediction_points.addData(data);
 		});
 	}
 	});
