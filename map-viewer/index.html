@@ -16,8 +16,8 @@
 </head>
 
 <body>
-  <div id="map" style="height: 600px;"></div>
-  <div id="details" style="height: 400px;"></div>
+  <div id="map" style="height: 800px; width: 49%; display: inline-block;"></div>
+  <div id="details" style="height: 800px; width: 49%; display: inline-block;"></div>
   
   <script>	  
     var bounds, crsName, crsOpts, originNw, projDef, zoomLevels;
@@ -49,7 +49,7 @@
 
     map.setView([60.204722, 24.962778], 7);
     
-    function onEachLAM(feature, layer) {
+    function onEachLAMPoint(feature, layer) {
 		//var popupContent = "<p>LAM station: <b>" + feature.properties.names.en + "</b></p>";
 		//if (feature.properties && feature.properties.popupContent) {
 		//	popupContent += feature.properties.popupContent;
@@ -66,18 +66,54 @@
         });
     }
     
-    var lam_points = new L.geoJson("", {onEachFeature: onEachLAM});
+    function onEachPredictionPoint(feature, layer) {
+        var content = "<p>Prediction point</p>";
+        
+        layer.on( 'click', function( e ) {
+            $('#details').html(content);
+        });
+    }
+    
+    var predictionPointMarkerOptions = {
+        radius: 5,
+        fillColor: "#ff7854",
+        color: "#000",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
+    };
+    
+    var prediction_points = new L.geoJson("", {
+        pointToLayer: function (feature, latlng) {
+            return L.circleMarker(latlng, predictionPointMarkerOptions);
+        },
+        onEachFeature: onEachPredictionPoint
+    });
+	prediction_points.addTo(map);
+
+	$.ajax({
+        dataType: "json",
+        url: "data/prediction_points.json",
+        success: function(data) {
+            $(data.features).each(function(key, data) {
+                prediction_points.addData(data);
+            });
+        }
+	});
+    
+    var lam_points = new L.geoJson("", {onEachFeature: onEachLAMPoint});
 	lam_points.addTo(map);
 
 	$.ajax({
-	dataType: "json",
-	url: "data/tms-stations-uusimaa.json",
-	success: function(data) {
-		$(data.features).each(function(key, data) {
-			lam_points.addData(data);
-		});
-	}
+        dataType: "json",
+        url: "data/tms-stations-uusimaa.json",
+        success: function(data) {
+            $(data.features).each(function(key, data) {
+                lam_points.addData(data);
+            });
+        }
 	});
+    
   </script>
 </body>
 </html>

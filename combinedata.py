@@ -1,10 +1,57 @@
-
+# -*- coding: utf8 -*-
 import stations
 import lam
 import numpy as np
 import pandas as pd
 import datetime
 from weatherloader import WeatherLoader
+import time 
+
+
+def getWeatherDataFrames(startDate, weeks, fmisids):
+	params = ["t2m", "ws_10min", "wg_10min", "wd_10min", "rh", "td", "r_1h", "ri_10min", "snow_aws", "vis", "n_man"]
+
+
+	dataFrames = {}
+
+	startTime = time.time()
+
+
+	for i in fmisids:
+
+	        loader = WeatherLoader(params, startDate, weeks, [0, 0], i)
+
+                weather = loader.getWeatherData()
+
+		dataFrames[i] = weather
+
+
+	print("loading weather took %f s" % (time.time() - startTime))
+	return dataFrames
+
+
+
+def addSpeedingInfo(data):
+
+	
+
+	maxSpeed = 200
+
+        speeding = np.zeros((data.shape[0]))
+
+	limit = data['speed_limit'].values
+
+        for i in range(maxSpeed):
+		v = i + 1
+
+		count = data['velocity%d' % v].values
+
+                speeding += count * (v > limit)
+
+
+	data['speeding'] = speeding
+
+
 
 
 
@@ -12,30 +59,42 @@ from weatherloader import WeatherLoader
 def getCombinedData(startDate, weeks):
 
 
-        names, stationCoord = stations.getWeatherStationLocations()
+        names, stationCoord, fmisids = stations.getWeatherStationLocations()
 
         stationCoord = np.asarray(stationCoord).astype('float')
 
-        sensorId, sensorCoord = stations.getTraficSensorCoordinates()
+        road = stations.getTraficSensorData()
 
+	sensorCoord = road[['longitude', 'latitude']].values
 
-
+	sensorId = road['station_id'].values
+	
         nearest = stations.getNearestWeatherStation(sensorCoord, stationCoord)
+
+	uniqueNearest = np.unique(nearest)
+
+	fmisids = np.asarray(fmisids)
+	
+	uniqueFmisids = fmisids[uniqueNearest]
+
+
+	weather = getWeatherDataFrames(startDate, weeks, uniqueFmisids)
 
         data = None
         for i in range(nearest.shape[0]):
+
                 station = nearest[i]
 
                 coordinates = stationCoord[station, :]
 
                 params = ["t2m", "ws_10min", "wg_10min", "wd_10min", "rh", "td", "r_1h", "ri_10min", "snow_aws", "vis", "n_man"]
 
+		print(names[station])
+		print(fmisids[station])
 
-                loader = WeatherLoader(params, startDate, weeks, coordinates)
+                w = weather[fmisids[station]]
 
-                weather = loader.getWeatherData()
-
-                if weather.empty:
+                if w.empty:
                         print("No weather data found!")
                         continue
 
@@ -46,7 +105,15 @@ def getCombinedData(startDate, weeks):
                         print("No traffic data found!")
                         continue
 
-                combined = weather.merge(traffic, on = 'unixtime', how = 'inner')
+		for col in road.columns.values:
+
+			traffic[col] = road.ix[road['station_id'] == sensorId[i], col].values[0]
+
+
+		addSpeedingInfo(traffic)
+
+
+                combined = w.merge(traffic, on = 'unixtime', how = 'inner')
 
                 data = pd.concat((data, combined), axis = 0)
 
@@ -55,13 +122,13 @@ def getCombinedData(startDate, weeks):
 
 def example():
 
-        startDate = datetime.date(2016, 1, 1)
-        weeks = 5
+        startDate = datetime.date(2015, 1, 1)
+        weeks = 2
 
         data = getCombinedData(startDate, weeks)
 
         data.to_csv('combined.csv', index = False)
-
+	
 
 
 example()

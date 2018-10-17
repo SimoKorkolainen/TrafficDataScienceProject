@@ -1,11 +1,12 @@
 
+# -*- coding: utf8 -*-
 
 import urllib2
 from bs4 import BeautifulSoup
 import json
 import matplotlib.pyplot as plot
 import numpy as np
-
+import pandas as pd	
 from scipy.spatial.distance import cdist
 
 def getWeatherStationLocations():
@@ -21,6 +22,7 @@ def getWeatherStationLocations():
 
 	coordinates = []
 	names = []
+	fmisids = []
 	for s in stations:
 
 		data = s.find_all('td')
@@ -28,12 +30,14 @@ def getWeatherStationLocations():
 		longitude = data[5].string
 		latitude = data[4].string
 		stationTypes = data[7].contents
+		fmisid = int(data[1].contents[0])
 
-		
-		if "Weather" in stationTypes:
+		if "Weather" in stationTypes and fmisid not in [137189, 103943, 103786, 101009]:
 			coordinates.append([longitude, latitude])
 			names.append(name)
-	return names, coordinates
+			fmisids.append(fmisid)
+
+	return names, coordinates, fmisids
 
 
 
@@ -72,7 +76,13 @@ def getTraficSensors():
 
 
 
-def getTraficSensorCoordinates():
+def getTraficSensorData():
+
+
+	road = pd.read_csv('road_shape_lam_stations.csv')
+
+	road['longitude'] = np.nan
+	road['latitude'] = np.nan
 
         coordinates = []
         sensorIds = []
@@ -95,18 +105,24 @@ def getTraficSensorCoordinates():
 
                                 sensorIds.append(j['properties']['tmsNumber'])
 
-        coordinates = np.asarray(coordinates)
+	for i in range(len(sensorIds)):
 
-	return sensorIds, coordinates
+		road.ix[road['station_id'] == sensorIds[i], 'longitude'] = coordinates[i][0]
+		road.ix[road['station_id'] == sensorIds[i], 'latitude'] = coordinates[i][1]
+
+
+	return road
 
 
 
 def example():
-	names, stationCoord = getWeatherStationLocations()
+	names, stationCoord, fmisids = getWeatherStationLocations()
+	'''
+	
 
 	stationCoord = np.asarray(stationCoord).astype('float')
 
-	sensorId, sensorCoord = getTraficSensorCoordinates()
+	sensorId, sensorCoord = getTraficSensorData()
         for k in sensorId:
                 print(k)
 
@@ -123,7 +139,7 @@ def example():
 	plot.scatter(stationCoord[u, 0], stationCoord[u, 1], c = 'red')
 	plot.show()
 
-
+	'''
 
 
 #example()

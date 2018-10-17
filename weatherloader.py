@@ -18,12 +18,12 @@ class WeatherLoader:
 
 
         
-        def __init__(self, params, startDay, weeks, coordinates):
+        def __init__(self, params, startDay, weeks, coordinates, fmisid):
                 self.parameters = params
                 self.startDay = startDay
                 self.weeks = weeks
                 self.coordinates = coordinates
-
+		self.fmisid = fmisid
 
         def readData(self, element, colNames):
                 if element is None:
@@ -48,7 +48,7 @@ class WeatherLoader:
         def readPositionData(self, treeRoot):
 	        pos = treeRoot.find(".//{http://www.opengis.net/gmlcov/1.0}positions")
 
-	        return self.readData(pos, ["latitude", "longitude", "unixtime"])
+	        return self.readData(pos, ["weatherLatitude", "weatherLongitude", "unixtime"])
 
 
         def getDataFromTree(self, wfsTree):
@@ -69,6 +69,8 @@ class WeatherLoader:
 
 
         def createQuery(self, firstDay, days):
+
+		'''
 		lon = self.coordinates[0]
 		lat = self.coordinates[1]
 		lonUpper = lon + 0.03
@@ -84,7 +86,8 @@ class WeatherLoader:
 	        c = ",".join((lonLower, latLower, lonUpper, latUpper))
 
 	        bbox = "bbox=%s" % c
-	       
+	       	'''
+		fmisid = "fmisid=%d" % self.fmisid
 
                 apiKey = "4ae5f71b-196f-4dc0-b730-05259ab23c23"
 
@@ -106,7 +109,7 @@ class WeatherLoader:
 
                
 
-                query = "&".join((address, queryId, parameters, timeStep, startTime, endTime, bbox))
+                query = "&".join((address, queryId, parameters, timeStep, startTime, endTime, fmisid))
 
 
                 return query
@@ -154,7 +157,7 @@ class WeatherLoader:
 
                         print(query)
                         subData = self.requestWFS(query)
-                        print(subData.shape)
+
                    
 		        data = pd.concat((data, subData), axis = 0)
 
