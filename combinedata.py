@@ -68,7 +68,7 @@ def getCombinedData(startDate, weeks):
 	sensorCoord = road[['longitude', 'latitude']].values
 
 	sensorId = road['station_id'].values
-	
+	speedLimits = road['speed_limit'].values
         nearest = stations.getNearestWeatherStation(sensorCoord, stationCoord)
 
 	uniqueNearest = np.unique(nearest)
@@ -99,7 +99,7 @@ def getCombinedData(startDate, weeks):
                         continue
 
 
-                traffic = lam.readData(sensorId[i], startDate, weeks * 7)
+                traffic = lam.readData(sensorId[i], startDate, weeks * 7, speedLimits[i])
 
                 if traffic.empty:
                         print("No traffic data found!")
@@ -110,7 +110,7 @@ def getCombinedData(startDate, weeks):
 			traffic[col] = road.ix[road['station_id'] == sensorId[i], col].values[0]
 
 
-		addSpeedingInfo(traffic)
+		#addSpeedingInfo(traffic)
 
 
                 combined = w.merge(traffic, on = 'unixtime', how = 'inner')
@@ -185,14 +185,15 @@ def combinePredictionPointsWithWeather():
 
 
 def example():
-        '''
+        
+
         startDate = datetime.date(2015, 1, 1)
-        weeks = 2
+        weeks = 1
 
         data = getCombinedData(startDate, weeks)
 
-        data.to_csv('combined.csv', index = False)
+        data.to_csv('combined2.csv', index = False)
 	
-        '''
-        combinePredictionPointsWithWeather()
+        
+        #combinePredictionPointsWithWeather()
 example()

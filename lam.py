@@ -22,7 +22,7 @@ maxSpeed=200
 amountOfSensors = 10
 
 # fetch data from liikennevirasto page
-def readDataForDay(sensor, year, day):
+def readDataForDay(sensor, year, day, speedLimit):
         try:
             address = "https://aineistot.liikennevirasto.fi/lam/rawdata/%d/%s/" % (year, getAreaCode())
             fileName = "lamraw_%d_%d_%d.csv" % (sensor, year % 100, day)
@@ -34,19 +34,19 @@ def readDataForDay(sensor, year, day):
             df2=cleanData(df)
             #print(df2['speed'].max())
             #summary data
-            df3=createDataframeForDay(df2) 
+            df3=createDataframeForDay(df2, speedLimit) 
         except Exception, e: # all error cases 
             print("Error: %s" % e)
             return pd.DataFrame()
         return df3
 
 # fetch data for one sensor
-def readData(sensor, startDate, days):
+def readData(sensor, startDate, days, speedLimit):
     data = None
     for i in range(days):
         nextDate = datetime.datetime.fromordinal(startDate.toordinal() + i)
         dayN = nextDate.toordinal() - datetime.datetime(nextDate.year, 1, 1).toordinal() + 1
-        data = pd.concat((data, readDataForDay(sensor, nextDate.year, dayN)), axis = 0)
+        data = pd.concat((data, readDataForDay(sensor, nextDate.year, dayN, speedLimit)), axis = 0)
         
     return data
     
@@ -62,8 +62,8 @@ def cleanData(df):
     return df3
 
 # edit input & cleaned data to summary format
-def createDataframeForDay(df):
-    counts = getAggregatesForDay(df)
+def createDataframeForDay(df, speedLimit):
+    carCount, speedingCount = getAggregatesForDay(df, speedLimit)
     h = np.arange(24) # 0-23
     df2 = pd.DataFrame()
 
@@ -91,21 +91,35 @@ def createDataframeForDay(df):
     df2['day'] = day
     df2['id'] = df['id'][0]
     df2['year'] = year
+
+    '''
     for i in range(0,maxSpeed): # indexes 0-199
         colName = 'velocity%d' % (i+1) # speed 1-200
-        df2[colName] = counts[:, i] 
-    #print(df2)
+        df2[colName] = counts[:, i] '''
+
+
+    df2['n_cars'] = carCount
+    df2['n_speeding_cars'] = speedingCount
     return df2
 
 # calculate amount of cars in speed classes
-def getAggregatesForDay(df):
-    counts = np.zeros((24, maxSpeed)) # 0-23, 0-199
+def getAggregatesForDay(df, speedLimit):
+    #counts = np.zeros((24, maxSpeed)) # 0-23, 0-199
+
+    carCount = np.zeros((24))
+    speedingCount = np.zeros((24))
+
     for h in range(0, 24): #0-23
         df2=df.loc[df['hour']==h]
-        c = np.bincount(df2['speed'], minlength = maxSpeed) # 0-199
-        c = c[: maxSpeed]
-        counts[h, :] = c
-    return counts
+        speed = df2['speed'].values.flatten()
+        #c = np.bincount(df2['speed'], minlength = maxSpeed) # 0-199
+        #c = c[: maxSpeed]
+        #counts[h, :] = c
+
+        carCount[h] = speed.shape[0]
+
+        speedingCount[h] = np.sum(speed > speedLimit)
+    return carCount, speedingCount
              
 # used in testing
 def writeFile(sensor, year, day):
