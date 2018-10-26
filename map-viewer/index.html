@@ -13,10 +13,11 @@
   <script src="proj4.js"></script>
   <script src="proj4leaflet.js"></script>
   <script src="jquery-3.3.1.min.js"></script>
+  <script src="Chart.js"></script>
 </head>
 
 <body>
-  <div id="map" style="height: 800px; width: 49%; display: inline-block;"></div>
+  <div id="map" style="height: 800px; width: 49%; display: inline-block; float: left;"></div>
   <div id="details" style="height: 800px; width: 49%; display: inline-block;"></div>
   
   <script>	  
@@ -57,34 +58,63 @@
 		//layer.bindPopup(popupContent);
         var content = "";
         if( ! feature.properties.names.en ) {
-            content = "<p>LAM station: <b>" + feature.properties.name + "</b></p>";
+            content = "<h3>LAM station " + feature.properties.name + "</h3>";
         } else {
-            content = "<p>LAM station: <b>" + feature.properties.names.en + "</b></p>";
+            content = "<h3>LAM station " + feature.properties.names.en + "</h3><canvas id=\"myChart\" width=\"300\" height=\"300\"></canvas>";
         }
         layer.on( 'click', function( e ) {
             $('#details').html(content);
+            
+            var ctx = document.getElementById("myChart").getContext('2d');
+            var scatterChart = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+        datasets: [{
+            label: 'Scatter Dataset',
+            data: [{
+                x: -10,
+                y: 0
+            }, {
+                x: 0,
+                y: 10
+            }, {
+                x: 10,
+                y: 5
+            }]
+        }]
+    },
+    options: {
+        scales: {
+            xAxes: [{
+                type: 'linear',
+                position: 'bottom'
+            }]
+        }
+    }
+});
         });
     }
     
     function onEachPredictionPoint(feature, layer) {
-        var content = "<p>Prediction point</p>";
+        var content = "<h3>Prediction point at Road " + feature.properties.roadAddress.roadNumber +"</h3><p>Prediction result: " + feature.properties.predictionResult + "</p>";
         
         layer.on( 'click', function( e ) {
             $('#details').html(content);
         });
     }
     
-    var predictionPointMarkerOptions = {
-        radius: 5,
-        fillColor: "#ff7854",
-        color: "#000",
-        weight: 1,
-        opacity: 1,
-        fillOpacity: 0.8
-    };
+    
     
     var prediction_points = new L.geoJson("", {
         pointToLayer: function (feature, latlng) {
+            var predictionPointMarkerOptions = {
+                radius: feature.properties.predictionResultLog1p,
+                fillColor: "#ff7854",
+                color: "#000",
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+            };
             return L.circleMarker(latlng, predictionPointMarkerOptions);
         },
         onEachFeature: onEachPredictionPoint
@@ -93,7 +123,7 @@
 
 	$.ajax({
         dataType: "json",
-        url: "data/prediction_points.json",
+        url: "data/prediction_points_updated.json",
         success: function(data) {
             $(data.features).each(function(key, data) {
                 prediction_points.addData(data);
