@@ -4,12 +4,13 @@
 <head>
   <meta charset="utf-8">
 
-  <title>Traffic Speeds</title>
+  <title>Speeding analysis at Uusimaa region - 2018-08-01 09:00 - 10:00</title>
   <meta name="description" content="Map Viewer Test">
   <meta name="author" content="">
 
   <link rel="stylesheet" href="leaflet.css" />
   <link rel="stylesheet" href="jquery-ui.css">
+  <script src="moment-with-locales.js"></script>
   <script src="leaflet.js"></script>
   <script src="proj4.js"></script>
   <script src="proj4leaflet.js"></script>
@@ -20,8 +21,11 @@
 </head>
 
 <body>
-  <div id="map" style="height: 800px; width: 49%; display: inline-block; float: left;"></div>
-  <div id="details" style="height: 800px; width: 49%; display: inline-block;"></div>
+  <div id="header" style="height: 40px; width: 100%; display: block;"><h1>Speeding analysis at Uusimaa region - 2018-08-01 09:00 - 10:00</h1></div>
+  <div id="content" style="width: 100%; display: block;">
+    <div id="map" style="height: 800px; width: 49%; display: inline-block; float: left;"></div>
+    <div id="details" style="height: 800px; width: 49%; display: inline-block;"></div>
+  </div>
   
   <script>	  
     var bounds, crsName, crsOpts, originNw, projDef, zoomLevels;
@@ -51,9 +55,9 @@
     
     var trafficData;
     
-    //$.get('../combined.csv', function (response) {
-    //    trafficData = $.csv.toObjects(response);;
-    //});
+    $.get('../combined.csv', function (response) {
+        trafficData = $.csv.toObjects(response);;
+    });
 	
 	//var yliopisto = L.marker([60.204722, 24.962778]).addTo(map);
 
@@ -66,12 +70,13 @@
 		//}
 		//layer.bindPopup(popupContent);
         var name = "";
+        var stationId = feature.properties.tmsNumber;
         if( ! feature.properties.names.en ) {
-            name = feature.properties.name;
+            name = feature.properties.name ;
         } else {
             name = feature.properties.names.en;
         }
-        var content = "<h3>LAM station " + name + "</h3><p>Date: <input type=\"text\" id=\"datepicker\"></p><canvas id=\"myChart\" width=\"300\" height=\"300\"></canvas>";
+        var content = "<h3>LAM station " + name + " (station number: " + stationId + ")</h3><p>Date: <input type=\"text\" id=\"datepicker\"></p><canvas id=\"stationChart\" width=\"300\" height=\"300\"></canvas>";
         
         layer.on( 'click', function( e ) {
             $('#details').html(content);
@@ -80,38 +85,57 @@
                 $( "#datepicker" ).datepicker();
             } );
             
-            var ctx = document.getElementById("myChart").getContext('2d');
-            var scatterChart = new Chart(ctx, {
-    type: 'scatter',
-    data: {
-        datasets: [{
-            label: 'Scatter Dataset',
-            data: [{
-                x: -10,
-                y: 0
-            }, {
-                x: 0,
-                y: 10
-            }, {
-                x: 10,
-                y: 5
-            }]
-        }]
-    },
-    options: {
-        scales: {
-            xAxes: [{
-                type: 'linear',
-                position: 'bottom'
-            }]
-        }
-    }
-});
+            var dayData = trafficData.filter(function (line) {
+                return line['station_id'] == stationId &&
+                    line['year'] == '2015' &&
+                    line['day'] == '9';
+            });
+            
+            var totalCars = [];
+            dayData.forEach( function(item){
+                totalCars.push({ y: item['n_cars'], x: moment(item['hour'], "hh") })
+            });
+            
+            var speeders = [];
+            dayData.forEach( function(item){
+                speeders.push({ y: item['n_speeding_cars'], x: moment(item['hour'], "hh") })
+            });            
+            
+            console.log(totalCars);
+            
+            var ctx = document.getElementById("stationChart").getContext('2d');
+            var stationChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                            label: 'Number of cars',
+                            data: totalCars
+                        },
+                        {
+                            label: 'Speeding cars',
+                            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                            data: speeders
+                        }]
+                },
+                options: {
+                    scales: {
+                        xAxes: [{
+                            type: 'time',
+                            time: {
+                                unit: 'hour',
+                                displayFormats: {
+                                    hour: 'HH:mm'
+                                }
+                            }
+                        }]
+                    }
+                }
+            });
         });
     }
     
     function onEachPredictionPoint(feature, layer) {
-        var content = "<h3>Prediction point at Road " + feature.properties.roadAddress.roadNumber +"</h3><p>Prediction result: " + feature.properties.predictionResult + "</p>";
+        var content = "<h3>Prediction point at Road " + feature.properties.roadAddress.roadNumber +" (point id: "+ feature.id + ")</h3><p>Prediction result: " + Math.round(Number(feature.properties.predictionResult)) + " speeding drivers per hour (both directions combined)</p>";
         
         layer.on( 'click', function( e ) {
             $('#details').html(content);
