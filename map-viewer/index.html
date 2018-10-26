@@ -9,11 +9,14 @@
   <meta name="author" content="">
 
   <link rel="stylesheet" href="leaflet.css" />
+  <link rel="stylesheet" href="jquery-ui.css">
   <script src="leaflet.js"></script>
   <script src="proj4.js"></script>
   <script src="proj4leaflet.js"></script>
   <script src="jquery-3.3.1.min.js"></script>
   <script src="Chart.js"></script>
+  <script src="jquery.csv.js"></script>
+  <script src="jquery-ui.js"></script>
 </head>
 
 <body>
@@ -45,6 +48,12 @@
 	}).addTo(map);
 	
 	L.control.scale().addTo(map);
+    
+    var trafficData;
+    
+    //$.get('../combined.csv', function (response) {
+    //    trafficData = $.csv.toObjects(response);;
+    //});
 	
 	//var yliopisto = L.marker([60.204722, 24.962778]).addTo(map);
 
@@ -56,14 +65,20 @@
 		//	popupContent += feature.properties.popupContent;
 		//}
 		//layer.bindPopup(popupContent);
-        var content = "";
+        var name = "";
         if( ! feature.properties.names.en ) {
-            content = "<h3>LAM station " + feature.properties.name + "</h3>";
+            name = feature.properties.name;
         } else {
-            content = "<h3>LAM station " + feature.properties.names.en + "</h3><canvas id=\"myChart\" width=\"300\" height=\"300\"></canvas>";
+            name = feature.properties.names.en;
         }
+        var content = "<h3>LAM station " + name + "</h3><p>Date: <input type=\"text\" id=\"datepicker\"></p><canvas id=\"myChart\" width=\"300\" height=\"300\"></canvas>";
+        
         layer.on( 'click', function( e ) {
             $('#details').html(content);
+            
+            $( function() {
+                $( "#datepicker" ).datepicker();
+            } );
             
             var ctx = document.getElementById("myChart").getContext('2d');
             var scatterChart = new Chart(ctx, {
@@ -108,8 +123,8 @@
     var prediction_points = new L.geoJson("", {
         pointToLayer: function (feature, latlng) {
             var predictionPointMarkerOptions = {
-                radius: feature.properties.predictionResultLog1p,
-                fillColor: "#ff7854",
+                radius: 2+ feature.properties.predictionResultLog1p,
+                fillColor: feature.properties.predictionResultColor,
                 color: "#000",
                 weight: 1,
                 opacity: 1,
