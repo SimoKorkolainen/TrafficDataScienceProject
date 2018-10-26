@@ -27,7 +27,9 @@
     <div id="details" style="height: 800px; width: 49%; display: inline-block;"></div>
   </div>
   
-  <script>	  
+  <script>
+    var selectedDate = moment("2015 9", "YYYY DDD");
+    
     var bounds, crsName, crsOpts, originNw, projDef, zoomLevels;
     zoomLevels = [8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25];
     crsName = 'EPSG:3067';
@@ -63,6 +65,54 @@
 
     map.setView([60.204722, 24.962778], 7);
     
+    
+    function showTrafficInformation( station, date ) {
+        var dayData = trafficData.filter(function (line) {
+            return line['station_id'] == station &&
+            line['year'] == date.year()  &&
+            line['day'] == date.dayOfYear();
+        });
+            
+        var totalCars = [];
+        dayData.forEach( function(item){
+            totalCars.push({ y: item['n_cars'], x: moment(item['year'] + " " + item['day'] + " " + item['hour'], "YYYY DDD hh") })
+        });
+            
+        var speeders = [];
+        dayData.forEach( function(item){
+            speeders.push({ y: item['n_speeding_cars'], x: moment(item['year'] + " " + item['day'] + " " + item['hour'], "YYYY DDD hh") })
+        });            
+            
+        var ctx = document.getElementById("stationChart").getContext('2d');
+        var stationChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                        label: 'Number of cars',
+                        data: totalCars
+                    },
+                    {
+                        label: 'Speeding cars',
+                        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                        data: speeders
+                    }]
+            },
+            options: {
+                scales: {
+                    xAxes: [{
+                        type: 'time',
+                        time: {
+                            unit: 'hour',
+                            displayFormats: {
+                                hour: 'HH:mm'
+                            }
+                        }
+                    }]
+                }
+            }
+        });
+    }
+    
     function onEachLAMPoint(feature, layer) {
 		//var popupContent = "<p>LAM station: <b>" + feature.properties.names.en + "</b></p>";
 		//if (feature.properties && feature.properties.popupContent) {
@@ -76,61 +126,22 @@
         } else {
             name = feature.properties.names.en;
         }
-        var content = "<h3>LAM station " + name + " (station number: " + stationId + ")</h3><p>Date: <input type=\"text\" id=\"datepicker\"></p><canvas id=\"stationChart\" width=\"300\" height=\"300\"></canvas>";
+        var content = "<h3>LAM station " + name + " (station number: " + stationId + ")</h3><p>Data browser, select date to see this stations traffic measurements (if available.) Date: <input type=\"text\" id=\"datepicker\"></p><canvas id=\"stationChart\" width=\"300\" height=\"300\"></canvas>";
         
         layer.on( 'click', function( e ) {
             $('#details').html(content);
             
-            $( function() {
-                $( "#datepicker" ).datepicker();
-            } );
-            
-            var dayData = trafficData.filter(function (line) {
-                return line['station_id'] == stationId &&
-                    line['year'] == '2015' &&
-                    line['day'] == '9';
-            });
-            
-            var totalCars = [];
-            dayData.forEach( function(item){
-                totalCars.push({ y: item['n_cars'], x: moment(item['hour'], "hh") })
-            });
-            
-            var speeders = [];
-            dayData.forEach( function(item){
-                speeders.push({ y: item['n_speeding_cars'], x: moment(item['hour'], "hh") })
-            });            
-            
-            console.log(totalCars);
-            
-            var ctx = document.getElementById("stationChart").getContext('2d');
-            var stationChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    datasets: [{
-                            label: 'Number of cars',
-                            data: totalCars
-                        },
-                        {
-                            label: 'Speeding cars',
-                            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                            data: speeders
-                        }]
-                },
-                options: {
-                    scales: {
-                        xAxes: [{
-                            type: 'time',
-                            time: {
-                                unit: 'hour',
-                                displayFormats: {
-                                    hour: 'HH:mm'
-                                }
-                            }
-                        }]
-                    }
+            $( "#datepicker" ).datepicker( { minDate: new Date(2015, 1 - 1, 1),
+                dateFormat: "yy-mm-dd",
+                onSelect: function(dateText, inst) {
+                    selectedDate = moment( dateText );
+                    showTrafficInformation( stationId, selectedDate );
                 }
             });
+            
+            $( "#datepicker" ).datepicker( "setDate", selectedDate.toDate());
+            showTrafficInformation( stationId, selectedDate );
+            
         });
     }
     
