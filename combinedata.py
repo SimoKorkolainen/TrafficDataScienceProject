@@ -204,6 +204,7 @@ def combinePredictionPointsWithWeather2():
 
         stationCoord = np.asarray(stationCoord).astype('float')
 
+	stationCoord = stationCoord[: 6, :]
 
 	sensorCoord = road[['longitude', 'latitude']].values
 
@@ -217,16 +218,41 @@ def combinePredictionPointsWithWeather2():
 	
 	uniqueFmisids = fmisids[uniqueNearest]
 	
-	uniqueFmisids = uniqueFmisids[:4]
-
+	print(nearest.shape)
 	weather = getWeatherDataFrames(startDate, weeks, uniqueFmisids)
 
 	unixTime = weather[uniqueFmisids[0]]['unixtime'].values
 
+	data = None
+
+	for i in range(nearest.shape[0]):
+
+		station = nearest[i]
+
+
+		pointData = weather[fmisids[station]].copy()
+
+		for col in road.columns.values:
+
+			pointData[col] = road.ix[i, col]
+
+		print(road.iloc[i, :])
+		print(pointData.head())
+		
+		data = pd.concat((data, pointData), axis = 0)
+
+	
+
+	'''
 	for u in unixTime:
 		d = unixTimeToFinnishDateTime(u)
-		fmt = "%Y-%m-%d %H:%M:%S %Z%z"
-		print(d.strftime(fmt))
+		dayFormat = "%Y-%m-%d"
+		timeFormat = "%H:%M:%S %Z%z"
+		print(d.strftime(dayFormat))
+		print(d.strftime(timeFormat))'''
+
+
+
 	'''
 	for i in weather.keys():
 
@@ -272,13 +298,13 @@ def combinePredictionPointsWithWeather2():
 def example():
 
 
-       
+       	'''
         startDate = datetime.date(2015, 1, 1)
-        weeks = 2
+        weeks = 50
         data = getCombinedData(startDate, weeks)
 
         data.to_csv('combined.csv', index = False)
-	
+	'''
         
-        #combinePredictionPointsWithWeather2()
+        combinePredictionPointsWithWeather2()
 example()
