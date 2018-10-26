@@ -13,6 +13,7 @@ import json
 import lightgbm as lgb
 
 
+from matplotlib.colors import rgb2hex
 
 
 
@@ -20,16 +21,21 @@ import lightgbm as lgb
 
 
 
-
-def dropColumnsFromData(data, dropSpaceTime):
+def dropColumnsFromData(data):
+	'''
         for i in range(200):
                 data.drop('velocity%d' % (i + 1), axis = 1, inplace = True)
         data.drop('speeding', axis = 1, inplace = True)
+	'''
 
-        if dropSpaceTime:
-                dropCols = ['unixtime', 'day', 'year', 'hour', 'id', 'station_id', 'latitude', 'longitude']
 
-                data.drop(dropCols, axis = 1, inplace = True)
+        
+        #dropCols = ['unixtime', 'day', 'year', 'hour', 'id', 'station_id', 'latitude', 'longitude']
+
+        dropCols = ['unixtime', 'year', 'id', 'station_id', 'n_speeding_cars', 'n_cars']
+
+        data.drop(dropCols, axis = 1, inplace = True)
+
 
 
 def getData():
@@ -39,10 +45,10 @@ def getData():
 
         data = pd.read_csv('combined.csv')
 
-        target = np.log1p(data['speeding'].values)
+        target = np.log1p(data['n_speeding_cars'].values)
 
  
-        dropColumnsFromData(data, True)
+        dropColumnsFromData(data)
 
         data.sort_index(axis = 1, inplace = True)
 
@@ -59,7 +65,7 @@ def getPredictionData():
 
         dataIndex = data['prediction_point_id'].values
 
-        dropCols = ['unixtime', 'day', 'year', 'hour', 'prediction_point_id', 'latitude', 'longitude']
+        dropCols = ['unixtime', 'year', 'prediction_point_id']
 
         data.drop(dropCols, axis = 1, inplace = True)
 
@@ -157,12 +163,28 @@ def makePredictions(data, models):
         return predicted
 
 
+
+
+
 def writePredictions(models):
 
         data, dataIndex = getPredictionData()
         
         
         pred = makePredictions(data, models)
+
+	logValues = np.log1p(pred)
+
+	logValues -= np.amin(logValues)
+	logValues /= np.amax(logValues)
+
+	colorMap = plot.get_cmap('plasma')
+
+	predColors = colorMap(logValues)
+
+	predColors = predColors[:, : 3]
+
+	hexColors = np.apply_along_axis(rgb2hex, 1, predColors)
 
         jsonData = None
 
@@ -176,18 +198,18 @@ def writePredictions(models):
         for features in jsonData['features']:
 
                 pointId = features['id']
-
-                value = pred[dataIndex == pointId][0]
-
+		ind = dataIndex == pointId
+                value = pred[ind][0]
+		predCol = hexColors[ind][0]
                 features['properties']['predictionResultLog1p'] = value
 
                 features['properties']['predictionResult'] = np.expm1(value)
 
+		features['properties']['predictionResultColor'] = predCol
+
         with open('map-viewer/data/prediction_points_updated.json', 'w') as output:
             json.dump(jsonData, output)
 
-
-        
 
 models = runTraining()
 

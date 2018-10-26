@@ -6,7 +6,7 @@ import pandas as pd
 import datetime
 from weatherloader import WeatherLoader
 import time 
-
+import pytz
 
 def getWeatherDataFrames(startDate, weeks, fmisids):
 	params = ["t2m", "ws_10min", "wg_10min", "wd_10min", "rh", "td", "r_1h", "ri_10min", "snow_aws", "vis", "n_man"]
@@ -53,8 +53,15 @@ def addSpeedingInfo(data):
 
 
 
+def unixTimeToFinnishDateTime(unixTime):
 
+	date = datetime.datetime.fromtimestamp(unixTime)
 
+        finlandTime = pytz.timezone('Europe/Helsinki')
+
+        date = finlandTime.localize(date)  
+
+	return date
 
 def getCombinedData(startDate, weeks):
 
@@ -184,16 +191,94 @@ def combinePredictionPointsWithWeather():
         print(weather)
 
 
-def example():
-        
+def combinePredictionPointsWithWeather2():
 
-        startDate = datetime.date(2015, 1, 1)
+        startDate = datetime.datetime(2018, 8, 1)
         weeks = 1
 
+
+
+        road = pd.read_csv('road_shape_prediction_points.csv')
+
+        names, stationCoord, fmisids = stations.getWeatherStationLocations()
+
+        stationCoord = np.asarray(stationCoord).astype('float')
+
+
+	sensorCoord = road[['longitude', 'latitude']].values
+
+	predictionId = road['prediction_point_id'].values
+	
+        nearest = stations.getNearestWeatherStation(sensorCoord, stationCoord)
+
+	uniqueNearest = np.unique(nearest)
+
+	fmisids = np.asarray(fmisids)
+	
+	uniqueFmisids = fmisids[uniqueNearest]
+	
+	uniqueFmisids = uniqueFmisids[:4]
+
+	weather = getWeatherDataFrames(startDate, weeks, uniqueFmisids)
+
+	unixTime = weather[uniqueFmisids[0]]['unixtime'].values
+
+	for u in unixTime:
+		d = unixTimeToFinnishDateTime(u)
+		fmt = "%Y-%m-%d %H:%M:%S %Z%z"
+		print(d.strftime(fmt))
+	'''
+	for i in weather.keys():
+
+		print(weather[i].head(20))'''
+
+
+	'''
+        selectTime = 1533103200
+        hour = 9
+        year = startDate.year
+        day = startDate.toordinal() + 1 - datetime.datetime(year, 1, 1).toordinal()
+
+
+        data = road.copy()
+
+        data['hour'] = hour
+        data['year'] = year
+        data['day'] = day
+
+
+        for station in uniqueNearest:
+                
+
+                params = ["t2m", "ws_10min", "wg_10min", "wd_10min", "rh", "td", "r_1h", "ri_10min", "snow_aws", "vis", "n_man"]
+
+		print(names[station])
+		print(fmisids[station])
+
+                w = weather[fmisids[station]]
+
+                pos = nearest == station
+                selectedWeather = w[w['unixtime'] == selectTime]
+
+                for col in selectedWeather.columns.values:
+
+                        data.at[pos, col] = selectedWeather[col].values[0]
+
+
+                data.to_csv('prediction_combined.csv', index = False)
+        print(weather)'''
+
+
+def example():
+
+
+       
+        startDate = datetime.date(2015, 1, 1)
+        weeks = 2
         data = getCombinedData(startDate, weeks)
 
-        data.to_csv('combined2.csv', index = False)
+        data.to_csv('combined.csv', index = False)
 	
         
-        #combinePredictionPointsWithWeather()
+        #combinePredictionPointsWithWeather2()
 example()
