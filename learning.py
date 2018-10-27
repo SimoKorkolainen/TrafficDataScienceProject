@@ -54,7 +54,7 @@ def getData():
 
         print(data.columns)
 
-        data = data.values
+        #data = data.values
 
 
         return data, target
@@ -63,18 +63,21 @@ def getPredictionData():
 
         data = pd.read_csv('prediction_combined.csv')
 
-        dataIndex = data['prediction_point_id'].values
 
-        dropCols = ['unixtime', 'year', 'prediction_point_id']
+        dataIndex = data['prediction_point_id'].values
+        date = data['date'].values
+        dropCols = ['unixtime', 'year', 'prediction_point_id', 'date']
 
         data.drop(dropCols, axis = 1, inplace = True)
 
         data.sort_index(axis = 1, inplace = True)
 
-        print(data.columns)
-        data = data.values
+        
 
-        return data, dataIndex
+        print(data.columns)
+        #data = data.values
+
+        return data, dataIndex, date
 
 
 def runLightGBM(trainData, trainTarget, testData, testTarget):
@@ -117,8 +120,8 @@ def runTraining():
         pred = np.zeros((data.shape[0]))
 
         for i in xrange(foldN):
-                trainData = data[fold != i, :]
-                testData = data[fold == i, :]
+                trainData = data.iloc[fold != i, :]
+                testData = data.iloc[fold == i, :]
 
                 trainTarget = target[fold != i]
                 testTarget = target[fold == i]
@@ -135,10 +138,11 @@ def runTraining():
 
         print("Ratio of explained variance (Validation):%f" % (1 - np.var(pred - target) / np.var(target)))
 
-        plot.scatter(pred, target, alpha = 0.2)
+        '''
+        plot.scatter(np.expm1(pred), np.expm1(target), alpha = 0.8, s = 1)
         plot.title('Prediction vs. target')
         
-        plot.show()
+        plot.show()'''
         return models
 
 
@@ -168,19 +172,20 @@ def makePredictions(data, models):
 
 def writePredictions(models):
 
-        data, dataIndex = getPredictionData()
+        data, dataIndex, dates = getPredictionData()
         
         
         pred = makePredictions(data, models)
 
-	logValues = np.log1p(pred)
+	values = pred.copy()
 
-	logValues -= np.amin(logValues)
-	logValues /= np.amax(logValues)
+	values -= np.amin(values)
+	values /= np.amax(values)
+
 
 	colorMap = plot.get_cmap('plasma')
 
-	predColors = colorMap(logValues)
+	predColors = colorMap(values)
 
 	predColors = predColors[:, : 3]
 
@@ -199,17 +204,22 @@ def writePredictions(models):
 
                 pointId = features['id']
 		ind = dataIndex == pointId
-                value = pred[ind][0]
-		predCol = hexColors[ind][0]
-                features['properties']['predictionResultLog1p'] = value
+                pointValue = pred[ind]
+		pointCol = hexColors[ind]
+                pointDates = dates[ind]
+                features['properties']['data'] = []
+                for i in range(len(pointValue)):
+                        d = {}
+                        d["predictionResult"] = int(np.round(np.expm1(pointValue[i])))
+                        d["predictionResultColor"] = pointCol[i]
+                        d["date"] = pointDates[i]
 
-                features['properties']['predictionResult'] = np.expm1(value)
+                        features['properties']['data'].append(d)
 
-		features['properties']['predictionResultColor'] = predCol
 
         with open('map-viewer/data/prediction_points_updated.json', 'w') as output:
             json.dump(jsonData, output)
-
+        
 
 models = runTraining()
 

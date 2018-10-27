@@ -193,7 +193,7 @@ def combinePredictionPointsWithWeather():
 
 def combinePredictionPointsWithWeather2():
 
-        startDate = datetime.datetime(2018, 8, 1)
+        startDate = datetime.datetime(2018, 10, 22)
         weeks = 1
 
 
@@ -204,6 +204,8 @@ def combinePredictionPointsWithWeather2():
 
         stationCoord = np.asarray(stationCoord).astype('float')
 
+        road = road.iloc[: 100, :]
+
 	stationCoord = stationCoord[: 6, :]
 
 	sensorCoord = road[['longitude', 'latitude']].values
@@ -211,7 +213,7 @@ def combinePredictionPointsWithWeather2():
 	predictionId = road['prediction_point_id'].values
 	
         nearest = stations.getNearestWeatherStation(sensorCoord, stationCoord)
-
+        
 	uniqueNearest = np.unique(nearest)
 
 	fmisids = np.asarray(fmisids)
@@ -221,27 +223,51 @@ def combinePredictionPointsWithWeather2():
 	print(nearest.shape)
 	weather = getWeatherDataFrames(startDate, weeks, uniqueFmisids)
 
-	unixTime = weather[uniqueFmisids[0]]['unixtime'].values
-
 	data = None
 
 	for i in range(nearest.shape[0]):
-
+                if i % 20 == 0:
+                        print(float(i) / nearest.shape[0])
 		station = nearest[i]
 
 
 		pointData = weather[fmisids[station]].copy()
 
+
+
+	        unixTime = pointData['unixtime'].values
+
+                dayN = np.zeros((unixTime.shape[0]), dtype = 'int')
+                hour = np.zeros((unixTime.shape[0]), dtype = 'int')
+                year = np.zeros((unixTime.shape[0]), dtype = 'int')
+                dateString = np.full((unixTime.shape[0]), "", dtype = 'object')
+
+                for j in range(unixTime.shape[0]):
+
+                        obsDate = unixTimeToFinnishDateTime(unixTime[j])
+
+                        year[j] = obsDate.year
+                        dayN[j] = obsDate.toordinal() - datetime.datetime(year[j], 1, 1).toordinal() + 1
+                        hour[j] = obsDate.hour
+		        timeFormat = "%Y-%m-%d %H:%M:%S %Z%z"
+                        s = obsDate.strftime(timeFormat)
+
+                        dateString[j] = obsDate.strftime(timeFormat)
+
+                
+                pointData['year'] = year
+                pointData['hour'] = hour
+                pointData['date'] = dateString
+                pointData['day'] = dayN
 		for col in road.columns.values:
 
 			pointData[col] = road.ix[i, col]
 
-		print(road.iloc[i, :])
-		print(pointData.head())
+		#print(pointData.columns.values)
 		
 		data = pd.concat((data, pointData), axis = 0)
 
-	
+        data.to_csv('prediction_combined.csv', index = False)
 
 	'''
 	for u in unixTime:
