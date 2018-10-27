@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
 
-  <title>Speeding analysis at Uusimaa region - 2018-08-01 09:00 - 10:00</title>
+  <title>Speeding analysis at Uusimaa region</title>
   <meta name="description" content="Map Viewer Test">
   <meta name="author" content="">
 
@@ -21,7 +21,7 @@
 </head>
 
 <body>
-  <div id="header" style="height: 80px; width: 100%; display: block;"><h1>Speeding analysis at Uusimaa region - 2018-08-01 09:00 - 10:00</h1><div id="slider" style="width: 96%; margin: auto;"></div></div>
+  <div id="header" style="height: 80px; width: 100%; display: block;"><h1 id="page_title">Speeding analysis at Uusimaa region</h1><div id="slider" style="width: 96%; margin: auto;"></div></div>
   <div id="content" style="width: 100%; display: block;">
     <div id="map" style="height: 800px; width: 49%; display: inline-block; float: left; margin-right: 5px;"></div>
     <div id="details" style="height: 800px; width: 49%; display: inline-block; margin-left: 5px;"></div>
@@ -29,10 +29,6 @@
   
   <script>
     var selectedDate = moment("2015 1", "YYYY DDD");
-    
-    $( function() {
-        $( "#slider" ).slider();
-    } );
     
     var bounds, crsName, crsOpts, originNw, projDef, zoomLevels;
     zoomLevels = [8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5, 0.25];
@@ -59,11 +55,11 @@
 	
 	L.control.scale().addTo(map);
     
-    var trafficData;
+    var trafficData = [];
     
-    $.get('../combined.csv', function (response) {
-        trafficData = $.csv.toObjects(response);;
-    });
+    //$.get('../combined.csv', function (response) {
+    //    trafficData = $.csv.toObjects(response);;
+    //});
 	
 	//var yliopisto = L.marker([60.204722, 24.962778]).addTo(map);
 
@@ -120,11 +116,6 @@
     }
     
     function onEachLAMPoint(feature, layer) {
-		//var popupContent = "<p>LAM station: <b>" + feature.properties.names.en + "</b></p>";
-		//if (feature.properties && feature.properties.popupContent) {
-		//	popupContent += feature.properties.popupContent;
-		//}
-		//layer.bindPopup(popupContent);
         var name = "";
         var stationId = feature.properties.tmsNumber;
         if( ! feature.properties.names.en ) {
@@ -152,41 +143,110 @@
     }
     
     function onEachPredictionPoint(feature, layer) {
-        var content = "<h3>Prediction point at Road " + feature.properties.roadAddress.roadNumber +" (point id: "+ feature.id + ")</h3><p>Prediction result: " + Math.round(Number(feature.properties.predictionResult)) + " speeding drivers per hour (both directions combined)</p>";
+        var content = "<h3>Prediction point at Road " + feature.properties.roadAddress.roadNumber +" (point id: "+ feature.id + ")</h3><p>Prediction result: " + feature.properties.predictionResult + " speeding drivers per hour (both directions combined)</p>";
         
         layer.on( 'click', function( e ) {
             $('#details').html(content);
         });
     }
     
-    
-    
-    var prediction_points = new L.geoJson("", {
-        pointToLayer: function (feature, latlng) {
-            var predictionPointMarkerOptions = {
-                radius: 2+ feature.properties.predictionResultLog1p,
-                fillColor: feature.properties.predictionResultColor,
-                color: "#000",
-                weight: 1,
-                opacity: 1,
-                fillOpacity: 0.8
-            };
-            return L.circleMarker(latlng, predictionPointMarkerOptions);
-        },
-        onEachFeature: onEachPredictionPoint
-    });
-	prediction_points.addTo(map);
-
-	$.ajax({
-        dataType: "json",
-        url: "data/prediction_points_updated.json",
-        success: function(data) {
-            $(data.features).each(function(key, data) {
-                prediction_points.addData(data);
-            });
+    var prediction_points;
+    function loadPredictionDatasetToMap() {
+        var start_time = prediction_times[ selected_prediction_time ];
+        var end_time = start_time.clone().add(1, 'hours');
+        var new_title = "Speeding analysis at Uusimaa region - " + start_time.format("YYYY-MM-DD HH:mm") + " - " + end_time.format("HH:mm");
+        document.title = new_title;
+        
+        if( prediction_points ) {
+            map.removeLayer( prediction_points );
         }
-	});
+        
+        prediction_points = new L.geoJson("", {
+            pointToLayer: function (feature, latlng) {
+                var predictionPointMarkerOptions = {
+                    radius: 2 + Math.log( feature.properties.predictionResult ),
+                    fillColor: feature.properties.predictionResultColor,
+                    color: "#000",
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                };
+                return L.circleMarker(latlng, predictionPointMarkerOptions);
+            },
+            onEachFeature: onEachPredictionPoint
+        });
+        prediction_points.addTo(map);
+        
+        $(prediction_point_datasets[ selected_prediction_time ].features).each(function(key, data) {
+            prediction_points.addData(data);
+        });
+        
+        $('#page_title').html( new_title );
+    };
     
+    
+
+    var selected_prediction_time;
+    var prediction_point_datasets = [];
+    var prediction_times = [];
+    $( function() {
+        $.getJSON('data/prediction_points_updated.json', function (response) {
+            var prediction_point_data = response;
+            
+            // hack to get dates in correct format
+            for (i = 0; i < prediction_point_data.features.length; i++ ) {
+                for (j = 0; j < prediction_point_data.features[i].properties.data.length; j++ )  {
+                    var temp_date = prediction_point_data.features[i].properties.data[j].date.replace( 'EET', '');
+                    temp_date = temp_date.replace( 'EEST', '');
+                    temp_date = temp_date.slice(0, -2) + ':00';
+                    prediction_point_data.features[i].properties.data[j].date = moment(temp_date, "YYYY-MM-DD HH:mm:ss ZZ");
+                }
+            }
+            
+            $(prediction_point_data.features[0].properties.data).each(function(key, data) {
+                prediction_times.push( data.date );
+            });
+            
+            prediction_times = prediction_times.sort(function(a, b){
+                return moment(a).format('X')-moment(b).format('X')
+            });
+            
+            var template_prediction_times = JSON.parse(JSON.stringify(prediction_point_data)); 
+            for (i = 0; i < template_prediction_times.features.length; i++ ) {
+                delete template_prediction_times.features[i].properties.data;
+            }
+            
+            $(prediction_times).each( function(key, timestamp) {
+                var temp_prediction_times = JSON.parse(JSON.stringify(template_prediction_times)); 
+                
+                for (i = 0; i < prediction_point_data.features.length; i++ ) {
+                    for (j = 0; j < prediction_point_data.features[i].properties.data.length; j++ )  {
+                        if (prediction_point_data.features[i].properties.data[j].date.isSame( timestamp )) {
+                            temp_prediction_times.features[i].properties.predictionResultColor = prediction_point_data.features[i].properties.data[j].predictionResultColor;
+                            temp_prediction_times.features[i].properties.predictionResult = prediction_point_data.features[i].properties.data[j].predictionResult;
+                            break;
+                        }
+                    }
+                }
+            
+                prediction_point_datasets.push( temp_prediction_times );
+            });
+            
+            selected_prediction_time = 0;
+            
+            $( "#slider" ).slider({
+                min: 0, 
+                max: prediction_times.length - 1,
+                change: function(event, ui ) {
+                    selected_prediction_time = ui.value;
+                    loadPredictionDatasetToMap();
+                }
+            });
+            
+            loadPredictionDatasetToMap();
+        });
+    } );
+
     var lam_points = new L.geoJson("", {onEachFeature: onEachLAMPoint});
 	lam_points.addTo(map);
 
