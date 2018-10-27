@@ -131,69 +131,10 @@ def getCombinedData(startDate, weeks):
 
 
 
+
 def combinePredictionPointsWithWeather():
 
-        startDate = datetime.datetime(2018, 8, 1)
-        weeks = 1
-
-        selectTime = 1533103200
-        hour = 9
-        year = startDate.year
-        day = startDate.toordinal() + 1 - datetime.datetime(year, 1, 1).toordinal()
-
-
-        road = pd.read_csv('road_shape_prediction_points.csv')
-
-        data = road.copy()
-
-        data['hour'] = hour
-        data['year'] = year
-        data['day'] = day
-
-        names, stationCoord, fmisids = stations.getWeatherStationLocations()
-
-        stationCoord = np.asarray(stationCoord).astype('float')
-
-
-	sensorCoord = road[['longitude', 'latitude']].values
-
-	predictionId = road['prediction_point_id'].values
-	
-        nearest = stations.getNearestWeatherStation(sensorCoord, stationCoord)
-
-	uniqueNearest = np.unique(nearest)
-
-	fmisids = np.asarray(fmisids)
-	
-	uniqueFmisids = fmisids[uniqueNearest]
-
-
-	weather = getWeatherDataFrames(startDate, weeks, uniqueFmisids)
-        for station in uniqueNearest:
-                
-
-                params = ["t2m", "ws_10min", "wg_10min", "wd_10min", "rh", "td", "r_1h", "ri_10min", "snow_aws", "vis", "n_man"]
-
-		print(names[station])
-		print(fmisids[station])
-
-                w = weather[fmisids[station]]
-
-                pos = nearest == station
-                selectedWeather = w[w['unixtime'] == selectTime]
-
-                for col in selectedWeather.columns.values:
-
-                        data.at[pos, col] = selectedWeather[col].values[0]
-
-
-                data.to_csv('prediction_combined.csv', index = False)
-        print(weather)
-
-
-def combinePredictionPointsWithWeather2():
-
-        startDate = datetime.datetime(2018, 10, 22)
+        startDate = datetime.datetime(2018, 10, 19)
         weeks = 1
 
 
@@ -203,10 +144,6 @@ def combinePredictionPointsWithWeather2():
         names, stationCoord, fmisids = stations.getWeatherStationLocations()
 
         stationCoord = np.asarray(stationCoord).astype('float')
-
-        road = road.iloc[: 100, :]
-
-	stationCoord = stationCoord[: 6, :]
 
 	sensorCoord = road[['longitude', 'latitude']].values
 
@@ -225,7 +162,7 @@ def combinePredictionPointsWithWeather2():
 
 	data = None
 
-	for i in range(nearest.shape[0]):
+	for i in xrange(nearest.shape[0]):
                 if i % 20 == 0:
                         print(float(i) / nearest.shape[0])
 		station = nearest[i]
@@ -237,88 +174,36 @@ def combinePredictionPointsWithWeather2():
 
 	        unixTime = pointData['unixtime'].values
 
-                dayN = np.zeros((unixTime.shape[0]), dtype = 'int')
+
                 hour = np.zeros((unixTime.shape[0]), dtype = 'int')
-                year = np.zeros((unixTime.shape[0]), dtype = 'int')
+
                 dateString = np.full((unixTime.shape[0]), "", dtype = 'object')
 
-                for j in range(unixTime.shape[0]):
+                for j in xrange(unixTime.shape[0]):
 
                         obsDate = unixTimeToFinnishDateTime(unixTime[j])
 
-                        year[j] = obsDate.year
-                        dayN[j] = obsDate.toordinal() - datetime.datetime(year[j], 1, 1).toordinal() + 1
-                        hour[j] = obsDate.hour
+
 		        timeFormat = "%Y-%m-%d %H:%M:%S %Z%z"
                         s = obsDate.strftime(timeFormat)
 
                         dateString[j] = obsDate.strftime(timeFormat)
 
                 
-                pointData['year'] = year
+
                 pointData['hour'] = hour
                 pointData['date'] = dateString
-                pointData['day'] = dayN
+
 		for col in road.columns.values:
 
 			pointData[col] = road.ix[i, col]
 
-		#print(pointData.columns.values)
+
 		
 		data = pd.concat((data, pointData), axis = 0)
 
         data.to_csv('prediction_combined.csv', index = False)
 
-	'''
-	for u in unixTime:
-		d = unixTimeToFinnishDateTime(u)
-		dayFormat = "%Y-%m-%d"
-		timeFormat = "%H:%M:%S %Z%z"
-		print(d.strftime(dayFormat))
-		print(d.strftime(timeFormat))'''
-
-
-
-	'''
-	for i in weather.keys():
-
-		print(weather[i].head(20))'''
-
-
-	'''
-        selectTime = 1533103200
-        hour = 9
-        year = startDate.year
-        day = startDate.toordinal() + 1 - datetime.datetime(year, 1, 1).toordinal()
-
-
-        data = road.copy()
-
-        data['hour'] = hour
-        data['year'] = year
-        data['day'] = day
-
-
-        for station in uniqueNearest:
-                
-
-                params = ["t2m", "ws_10min", "wg_10min", "wd_10min", "rh", "td", "r_1h", "ri_10min", "snow_aws", "vis", "n_man"]
-
-		print(names[station])
-		print(fmisids[station])
-
-                w = weather[fmisids[station]]
-
-                pos = nearest == station
-                selectedWeather = w[w['unixtime'] == selectTime]
-
-                for col in selectedWeather.columns.values:
-
-                        data.at[pos, col] = selectedWeather[col].values[0]
-
-
-                data.to_csv('prediction_combined.csv', index = False)
-        print(weather)'''
 
 
 def example():
@@ -332,5 +217,5 @@ def example():
         data.to_csv('combined.csv', index = False)
 	'''
         
-        combinePredictionPointsWithWeather2()
+        combinePredictionPointsWithWeather()
 example()

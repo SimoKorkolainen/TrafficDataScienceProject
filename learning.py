@@ -22,17 +22,8 @@ from matplotlib.colors import rgb2hex
 
 
 def dropColumnsFromData(data):
-	'''
-        for i in range(200):
-                data.drop('velocity%d' % (i + 1), axis = 1, inplace = True)
-        data.drop('speeding', axis = 1, inplace = True)
-	'''
 
-
-        
-        #dropCols = ['unixtime', 'day', 'year', 'hour', 'id', 'station_id', 'latitude', 'longitude']
-
-        dropCols = ['unixtime', 'year', 'id', 'station_id', 'n_speeding_cars', 'n_cars']
+        dropCols = ['unixtime', 'day', 'year', 'id', 'station_id', 'n_speeding_cars', 'n_cars']
 
         data.drop(dropCols, axis = 1, inplace = True)
 
@@ -66,7 +57,7 @@ def getPredictionData():
 
         dataIndex = data['prediction_point_id'].values
         date = data['date'].values
-        dropCols = ['unixtime', 'year', 'prediction_point_id', 'date']
+        dropCols = ['unixtime', 'prediction_point_id', 'date']
 
         data.drop(dropCols, axis = 1, inplace = True)
 
