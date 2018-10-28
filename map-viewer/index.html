@@ -10,14 +10,15 @@
 
   <link rel="stylesheet" href="leaflet.css" />
   <link rel="stylesheet" href="jquery-ui.css">
-  <script src="moment-with-locales.js"></script>
-  <script src="leaflet.js"></script>
-  <script src="proj4.js"></script>
-  <script src="proj4leaflet.js"></script>
-  <script src="jquery-3.3.1.min.js"></script>
-  <script src="Chart.js"></script>
-  <script src="jquery.csv.js"></script>
-  <script src="jquery-ui.js"></script>
+  <script type="text/javascript" src="moment-with-locales.js"></script>
+  <script type="text/javascript" src="leaflet.js"></script>
+  <script type="text/javascript" src="proj4.js"></script>
+  <script type="text/javascript" src="proj4leaflet.js"></script>
+  <script type="text/javascript" src="jquery-3.3.1.min.js"></script>
+  <script type="text/javascript" src="Chart.js"></script>
+  <script type="text/javascript" src="jquery.csv.js"></script>
+  <script type="text/javascript" src="jquery-ui.js"></script>
+  <script type="text/javascript" src="pako.js"></script>
 </head>
 
 <body>
@@ -164,7 +165,7 @@
         prediction_points = new L.geoJson("", {
             pointToLayer: function (feature, latlng) {
                 var predictionPointMarkerOptions = {
-                    radius: 2 + Math.log( feature.properties.predictionResult ),
+                    radius: 2 + Math.log2( feature.properties.predictionResult ),
                     fillColor: feature.properties.predictionResultColor,
                     color: "#000",
                     weight: 1,
@@ -189,62 +190,42 @@
     var selected_prediction_time;
     var prediction_point_datasets = [];
     var prediction_times = [];
+    var prediction_point_data;
+    var prediction_point_data2;
+    
     $( function() {
-        $.getJSON('data/prediction_points_updated.json', function (response) {
-            var prediction_point_data = response;
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', 'data/prediction_points_updated2.json.gz', true);
+        xhr.responseType = 'arraybuffer';
+ 
+        xhr.onload = function(e) {
+            if (this.status == 200) {
+                prediction_point_data2 = this.response;
+                prediction_point_data = JSON.parse( pako.ungzip( this.response ,{ to: 'string' }) );
             
-            // hack to get dates in correct format
-            for (i = 0; i < prediction_point_data.features.length; i++ ) {
-                for (j = 0; j < prediction_point_data.features[i].properties.data.length; j++ )  {
-                    var temp_date = prediction_point_data.features[i].properties.data[j].date.replace( 'EET', '');
-                    temp_date = temp_date.replace( 'EEST', '');
-                    temp_date = temp_date.slice(0, -2) + ':00';
-                    prediction_point_data.features[i].properties.data[j].date = moment(temp_date, "YYYY-MM-DD HH:mm:ss ZZ");
+                prediction_times = prediction_point_data.prediction_times;
+                for (i = 0; i < prediction_times.length; i++ ) {
+                    prediction_times[i] = moment(prediction_times[i], "YYYY-MM-DD HH:mm:ss ZZ");
                 }
-            }
             
-            $(prediction_point_data.features[0].properties.data).each(function(key, data) {
-                prediction_times.push( data.date );
-            });
+                prediction_point_datasets = prediction_point_data.datasets;
             
-            prediction_times = prediction_times.sort(function(a, b){
-                return moment(a).format('X')-moment(b).format('X')
-            });
+                selected_prediction_time = 0;
             
-            var template_prediction_times = JSON.parse(JSON.stringify(prediction_point_data)); 
-            for (i = 0; i < template_prediction_times.features.length; i++ ) {
-                delete template_prediction_times.features[i].properties.data;
-            }
-            
-            $(prediction_times).each( function(key, timestamp) {
-                var temp_prediction_times = JSON.parse(JSON.stringify(template_prediction_times)); 
-                
-                for (i = 0; i < prediction_point_data.features.length; i++ ) {
-                    for (j = 0; j < prediction_point_data.features[i].properties.data.length; j++ )  {
-                        if (prediction_point_data.features[i].properties.data[j].date.isSame( timestamp )) {
-                            temp_prediction_times.features[i].properties.predictionResultColor = prediction_point_data.features[i].properties.data[j].predictionResultColor;
-                            temp_prediction_times.features[i].properties.predictionResult = prediction_point_data.features[i].properties.data[j].predictionResult;
-                            break;
-                        }
+                $( "#slider" ).slider({
+                    min: 0, 
+                    max: prediction_times.length - 1,
+                    change: function(event, ui ) {
+                        selected_prediction_time = ui.value;
+                        loadPredictionDatasetToMap();
                     }
-                }
+                });
             
-                prediction_point_datasets.push( temp_prediction_times );
-            });
-            
-            selected_prediction_time = 0;
-            
-            $( "#slider" ).slider({
-                min: 0, 
-                max: prediction_times.length - 1,
-                change: function(event, ui ) {
-                    selected_prediction_time = ui.value;
-                    loadPredictionDatasetToMap();
-                }
-            });
-            
-            loadPredictionDatasetToMap();
-        });
+                loadPredictionDatasetToMap();
+            }
+        };
+ 
+        xhr.send();
     } );
 
     var lam_points = new L.geoJson("", {onEachFeature: onEachLAMPoint});
