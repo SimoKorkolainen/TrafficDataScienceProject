@@ -23,12 +23,9 @@
 </head>
 
 <body>
+  <div id="header"><h1 id="page_title">Speeding analysis at Uusimaa region</h1><div id="slider"></div></div>
+  <div id="map"></div>
   <div id="loader"></div>
-  <div id="header" style="height: 80px; width: 100%; display: block;"><h1 id="page_title">Speeding analysis at Uusimaa region</h1><div id="slider" style="width: 96%; margin: auto;"></div></div>
-  <div id="content" style="width: 100%; display: block;">
-    <div id="map" style="height: 800px; width: 49%; display: inline-block; float: left; margin-right: 5px;"></div>
-    <div id="details" style="height: 800px; width: 49%; display: inline-block; margin-left: 5px;"></div>
-  </div>
   
   <script>
     var selectedDate = moment("2015 1", "YYYY DDD");
@@ -128,9 +125,9 @@
         }
         var content = "<h3>LAM station " + name + " (station number: " + stationId + ")</h3><p>Data browser, select date to see this stations traffic measurements (if available.) Date: <input type=\"text\" id=\"datepicker\"></p><div style=\"height: 600px; \"><canvas id=\"stationChart\"></canvas></div>";
         
-        layer.on( 'click', function( e ) {
-            $('#details').html(content);
-            
+		layer.bindPopup(content);
+        
+        layer.on( 'click', function( e ) {            
             $( "#datepicker" ).datepicker( { minDate: new Date(2015, 1 - 1, 1),
                 dateFormat: "yy-mm-dd",
                 onSelect: function(dateText, inst) {
@@ -146,11 +143,13 @@
     }
     
     function onEachPredictionPoint(feature, layer) {
-        var content = "<h3>Prediction point at Road " + feature.properties.roadAddress.roadNumber +" (point id: "+ feature.id + ")</h3><p>Prediction result: " + feature.properties.predictionResult + " speeding drivers per hour (both directions combined)</p>";
+        var content = "<h3>Prediction point at Road " + feature.properties.roadAddress.roadNumber +
+        "</h3><ul><li>Latitude: " + feature.geometry.coordinates[1] + "</li><li>longitude: " + 
+        feature.geometry.coordinates[0] + "</li><li>point ID: " + feature.id + 
+        "</li><li>Prediction result: <b>" + feature.properties.predictionResult + 
+        "</b> speeding drivers per hour (both directions combined)</li></ul>";
         
-        layer.on( 'click', function( e ) {
-            $('#details').html(content);
-        });
+        layer.bindPopup(content, {autoClose: false, closeOnClick: false});
     }
     
     var prediction_points;

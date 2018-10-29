@@ -1,3 +1,27 @@
+body {
+    margin: 0px;
+}
+
+#header {
+    height: 8vh; 
+    min-height: 82px;
+    width: 98%; 
+    margin: auto;
+    display: block;
+}
+
+#slider {
+    width: 96%; 
+    margin: auto;
+}
+
+#map {
+    height: 90vh; 
+    width: 100%; 
+    display: block;  
+    margin: 0px;
+}
+
 #loader {
     border: 16px solid #f3f3f3; /* Light grey */
     border-top: 16px solid #3498db; /* Blue */
