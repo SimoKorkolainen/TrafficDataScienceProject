@@ -83,7 +83,7 @@
             speeders.push({ y: item['n_speeding_cars'], x: moment(item['year'] + " " + item['day'] + " " + item['hour'], "YYYY DDD hh") })
         });            
             
-        var ctx = document.getElementById("stationChart").getContext('2d');
+        var ctx = document.getElementById("stationChart_" + station).getContext('2d');
         var stationChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -123,12 +123,12 @@
         } else {
             name = feature.properties.names.en;
         }
-        var content = "<h3>LAM station " + name + " (station number: " + stationId + ")</h3><p>Data browser, select date to see this stations traffic measurements (if available.) Date: <input type=\"text\" id=\"datepicker\"></p><div style=\"height: 600px; \"><canvas id=\"stationChart\"></canvas></div>";
+        var content = "<h3>LAM station " + name + "</h3><ul><li>Station ID: " + stationId + "</li></ul><p>Data browser, select date to see this stations traffic measurements (if available.) Date: <input type=\"text\" id=\"datepicker_" + stationId + "\"></p><div style=\"height: 600px; \"><canvas id=\"stationChart_" + stationId +"\"></canvas></div>";
         
-		layer.bindPopup(content);
+		layer.bindPopup(content, {autoClose: false, closeOnClick: false});
         
         layer.on( 'click', function( e ) {            
-            $( "#datepicker" ).datepicker( { minDate: new Date(2015, 1 - 1, 1),
+            $( "#datepicker_" + stationId ).datepicker( { minDate: new Date(2015, 1 - 1, 1),
                 dateFormat: "yy-mm-dd",
                 onSelect: function(dateText, inst) {
                     selectedDate = moment( dateText );
@@ -136,7 +136,7 @@
                 }
             });
             
-            $( "#datepicker" ).datepicker( "setDate", selectedDate.toDate());
+            $( "#datepicker_" + stationId ).datepicker( "setDate", selectedDate.toDate());
             showTrafficInformation( stationId, selectedDate );
             
         });
