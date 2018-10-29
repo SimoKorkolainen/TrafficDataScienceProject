@@ -54,18 +54,12 @@
 	}).addTo(map);
 	
 	L.control.scale().addTo(map);
-    
-    var trafficData = [];
-    
-    //$.get('../combined.csv', function (response) {
-    //    trafficData = $.csv.toObjects(response);;
-    //});
-	
+    	
 	//var yliopisto = L.marker([60.204722, 24.962778]).addTo(map);
 
     map.setView([60.204722, 24.962778], 7);
     
-    
+    var charts = {};
     function showTrafficInformation( station, date ) {
         var dayData = trafficData.filter(function (line) {
             return line['station_id'] == station &&
@@ -75,16 +69,19 @@
             
         var totalCars = [];
         dayData.forEach( function(item){
-            totalCars.push({ y: item['n_cars'], x: moment(item['year'] + " " + item['day'] + " " + item['hour'], "YYYY DDD hh") })
+            totalCars.push({ y: item['n_cars'], x: moment(item['year'] + " " + item['day'] + " " + item['hour'], 'YYYY DDD hh') })
         });
             
         var speeders = [];
         dayData.forEach( function(item){
-            speeders.push({ y: item['n_speeding_cars'], x: moment(item['year'] + " " + item['day'] + " " + item['hour'], "YYYY DDD hh") })
+            speeders.push({ y: item['n_speeding_cars'], x: moment(item['year'] + " " + item['day'] + " " + item['hour'], 'YYYY DDD hh') })
         });            
             
-        var ctx = document.getElementById("stationChart_" + station).getContext('2d');
-        var stationChart = new Chart(ctx, {
+        var ctx = document.getElementById('stationChart_' + station).getContext('2d');
+        if ( charts['stationChart_'  + station ] ) {
+            charts['stationChart_'  + station ].destroy()
+        }
+        charts['stationChart_' + station ] = new Chart(ctx, {
             type: 'line',
             data: {
                 datasets: [{
@@ -123,9 +120,9 @@
         } else {
             name = feature.properties.names.en;
         }
-        var content = "<h3>LAM station " + name + "</h3><ul><li>Station ID: " + stationId + "</li></ul><p>Data browser, select date to see this stations traffic measurements (if available.) Date: <input type=\"text\" id=\"datepicker_" + stationId + "\"></p><div style=\"height: 600px; \"><canvas id=\"stationChart_" + stationId +"\"></canvas></div>";
+        var content = "<h3>LAM station " + name + "</h3><ul><li>Station ID: " + stationId + "</li></ul><p>Data browser, select date to see this stations traffic measurements (if available.) <b>Date:</b> <input type=\"text\" id=\"datepicker_" + stationId + "\"></p><div style=\"height: 500px; width: 500px;\"><canvas id=\"stationChart_" + stationId +"\"></canvas></div>";
         
-		layer.bindPopup(content, {autoClose: false, closeOnClick: false});
+		layer.bindPopup(content, {autoClose: false, closeOnClick: false, minWidth: 500});
         
         layer.on( 'click', function( e ) {            
             $( "#datepicker_" + stationId ).datepicker( { minDate: new Date(2015, 1 - 1, 1),
@@ -143,12 +140,12 @@
     }
     
     function onEachPredictionPoint(feature, layer) {
-        var content = "<h3>Prediction point at Road " + feature.properties.roadAddress.roadNumber +
-        "</h3><ul><li>Latitude: " + feature.geometry.coordinates[1] + "</li><li>Longitude: " + 
-        feature.geometry.coordinates[0] + "</li><li>Point ID: " + feature.id + 
-        "</li><li>Prediction result: <b>" + feature.properties.predictionResult + 
-        "</b> speeding drivers per hour (both directions combined)</li>" +
-        "<li>Speed limit: " + feature.properties.speedLimit;
+        var content = "<h3>Prediction point at Road " + feature.properties.roadAddress.roadNumber + "</h3>"
+            +"<ul><li>Latitude: " + feature.geometry.coordinates[1] + "</li>" 
+            + "<li>Longitude: " + feature.geometry.coordinates[0] + "</li>"
+            +"<li>Point ID: " + feature.id + "</li>"
+            +"<li>Prediction result: <b>" + feature.properties.predictionResult + "</b> speeding drivers per hour (both directions combined)</li>" +
+            "<li>Speed limit: " + feature.properties.speedLimit;
         
         if ( feature.properties.speedLimit != feature.properties.speedLimitWinter ) {
             content += " (winter limit: " + feature.properties.speedLimitWinter +")";
@@ -201,7 +198,6 @@
     var prediction_point_datasets = [];
     var prediction_times = [];
     var prediction_point_data;
-    var prediction_point_data2;
     
     $( function() {
         var xhr = new XMLHttpRequest();
@@ -210,7 +206,6 @@
  
         xhr.onload = function(e) {
             if (this.status == 200) {
-                prediction_point_data2 = this.response;
                 prediction_point_data = JSON.parse( pako.ungzip( this.response ,{ to: 'string' }) );
             
                 prediction_times = prediction_point_data.prediction_times;
@@ -250,6 +245,21 @@
             });
         }
 	});
+    
+    var trafficData = [];
+    $( function() {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', 'data/combined.csv.gz', true);
+        xhr.responseType = 'arraybuffer';
+ 
+        xhr.onload = function(e) {
+            if (this.status == 200) {
+                trafficData = $.csv.toObjects( pako.ungzip( this.response ,{ to: 'string' }) );
+            }
+        };
+ 
+        xhr.send();
+    } );
     
   </script>
 </body>
