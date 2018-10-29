@@ -4,49 +4,44 @@ import json
 import copy
 import csv
 
-with open('../map-viewer/data/prediction_points_updated.json', 'r') as infile:
-    dataset = json.load(infile)
-
-shape_info = {}
-with open('../road_shape_prediction_points.csv', newline='') as csvfile:
+dataset = {}
+dataset2 = {}
+with open('../combined.csv', newline='') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
-        shape_info[ row['prediction_point_id'] ] = { 'speedLimit':  row['speed_limit'], 'speedLimitWinter': row['speed_limit_winter'] }
+        if not  row['station_id' ] in dataset:
+            dataset[ row['station_id' ] ] = []
+        if not   row['station_id' ] in dataset2:
+            dataset2[ row['station_id' ] ] = { 'weatherLatitude': row['weatherLatitude'], 'weatherLongitude': row['weatherLongitude'], 'speed_limit': row['speed_limit'], 'speed_limit_winter': row['speed_limit_winter'] }
+            
+        dataset[  row['station_id' ] ].append( { 't2m': row['t2m'],
+            'ws_10min': row['ws_10min'],
+            'wg_10min': row['wg_10min'],
+            'wd_10min': row['wd_10min'],
+            'rh': row['rh'],
+            'td': row['td'],
+            'r_1h': row['r_1h'],
+            'ri_10min': row['ri_10min'],
+            'snow_aws': row['snow_aws'],
+            'vis': row['vis'],
+            'n_man': row['n_man'],
+            'hour': row['hour'],
+            'day': row['day'],
+            'year': row['year'],
+            'n_cars': row['n_cars'],
+            'n_speeding_cars': row['n_speeding_cars'] } )
+            
+with open('../tms-stations-uusimaa.json', 'r') as infile:
+    tms = json.load(infile)
 
-for i in range(0, len( dataset['features'] ) ):
-    for j in range( 0, len( dataset['features'][i]['properties']['data'] ) ):
-        temp_date = dataset['features'][i]['properties']['data'][j]['date'].replace( 'EET', '')
-        temp_date = temp_date.replace( 'EEST', '')
-        temp_date = temp_date[0 : -2 ] + ':00'
-        dataset['features'][i]['properties']['data'][j]['date'] = temp_date
+for feature in tms['features']:
+    station_id = str( feature['properties']['tmsNumber'] )
+    if not station_id in dataset:
+        dataset[ station_id ] = []
 
-dataset2 = { 'prediction_times': [], 'datasets': [] }
-
-for data in dataset['features'][0]['properties']['data']:
-    dataset2['prediction_times'].append( data['date'] )
-
-dataset2['prediction_times'].sort()
-
-template_prediction_times = copy.deepcopy( dataset )
-
-for i in range(0, len( template_prediction_times['features'] ) ):
-    del template_prediction_times['features'][i]['properties']['data']
-
-for timestamp in dataset2['prediction_times']:
-    temp_prediction_times = copy.deepcopy( template_prediction_times )
-
-    for i in range(0, len( dataset['features'] ) ):
-        for j in range( 0, len( dataset['features'][i]['properties']['data'] ) ):
-            if dataset['features'][i]['properties']['data'][j]['date'] == timestamp:
-                temp_prediction_times['features'][i]['properties']['predictionResultColor'] = dataset['features'][i]['properties']['data'][j]['predictionResultColor']
-                temp_prediction_times['features'][i]['properties']['predictionResult'] = dataset['features'][i]['properties']['data'][j]['predictionResult']
-                temp_prediction_times['features'][i]['properties'].update( shape_info[ temp_prediction_times['features'][i]['id'] ] )
-                break
-    dataset2['datasets'].append( temp_prediction_times )
-
-with open('../map-viewer/data/prediction_times.json', 'w') as outfile:
-        json.dump(dataset2['prediction_times'], outfile )
-
-for i in range(0, len( dataset2['prediction_times'] ) ):
-    with open('../map-viewer/data/prediction_points_' + str(i) +'.json', 'w') as outfile:
-        json.dump(dataset2['datasets'][i], outfile )
+for key in dataset.keys():
+    with open('../map-viewer/data/measurements/lam_' + key +'.csv', 'w') as outfile:
+        fieldnames = ['t2m', 'ws_10min', 'wg_10min', 'wd_10min', 'rh', 'td', 'r_1h', 'ri_10min', 'snow_aws', 'vis', 'n_man', 'hour', 'day', 'year', 'n_cars', 'n_speeding_cars' ]
+        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(dataset[ key ])

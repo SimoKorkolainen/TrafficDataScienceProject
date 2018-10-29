@@ -71,13 +71,13 @@
     function showTrafficInformation( station, date ) {
         $('#loader').show();
         
-        if( charts[ station ] ) {
+        if( trafficData[ station ] ) {
             showTrafficInformationChart( station, date );
         } else {
-        
+            console.log( "load data for " + station );
             $( function() {
                 var xhr = new XMLHttpRequest();
-                xhr.open('GET', 'data/combined.csv.gz', true);
+                xhr.open('GET', 'data/measurements/lam_' + station + '.csv.gz', true);
                 xhr.responseType = 'arraybuffer';
      
                 xhr.onload = function(e) {
@@ -95,8 +95,7 @@
     
     function showTrafficInformationChart( station, date ) {
         var dayData = trafficData[ station ].filter(function (line) {
-            return line['station_id'] == station &&
-            line['year'] == date.year()  &&
+            return line['year'] == date.year()  &&
             line['day'] == date.dayOfYear();
         });
             
@@ -106,7 +105,6 @@
             totalCars.push({ y: item['n_cars'], x: moment(item['year'] + " " + item['day'] + " " + item['hour'], 'YYYY DDD hh') })
             speeders.push({ y: item['n_speeding_cars'], x: moment(item['year'] + " " + item['day'] + " " + item['hour'], 'YYYY DDD hh') })
         });
-            
             
         var ctx = document.getElementById('stationChart_' + station).getContext('2d');
         if ( charts['stationChart_'  + station ] ) {
