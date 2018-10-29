@@ -144,10 +144,16 @@
     
     function onEachPredictionPoint(feature, layer) {
         var content = "<h3>Prediction point at Road " + feature.properties.roadAddress.roadNumber +
-        "</h3><ul><li>Latitude: " + feature.geometry.coordinates[1] + "</li><li>longitude: " + 
-        feature.geometry.coordinates[0] + "</li><li>point ID: " + feature.id + 
+        "</h3><ul><li>Latitude: " + feature.geometry.coordinates[1] + "</li><li>Longitude: " + 
+        feature.geometry.coordinates[0] + "</li><li>Point ID: " + feature.id + 
         "</li><li>Prediction result: <b>" + feature.properties.predictionResult + 
-        "</b> speeding drivers per hour (both directions combined)</li></ul>";
+        "</b> speeding drivers per hour (both directions combined)</li>" +
+        "<li>Speed limit: " + feature.properties.speedLimit;
+        
+        if ( feature.properties.speedLimit != feature.properties.speedLimitWinter ) {
+            content += " (winter limit: " + feature.properties.speedLimitWinter +")";
+        }
+        content += "</li></ul>";
         
         layer.bindPopup(content, {autoClose: false, closeOnClick: false});
     }
