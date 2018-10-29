@@ -10,6 +10,13 @@ body {
     display: block;
 }
 
+#menu {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 999;
+}
+
 #slider {
     width: 96%; 
     margin: auto;
@@ -20,7 +27,9 @@ body {
     width: 100%; 
     display: block;  
     margin: 0px;
+
 }
+.ui-dialog { z-index: 900 !important ;}
 
 #loader {
     border: 16px solid #f3f3f3; /* Light grey */

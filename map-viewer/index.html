@@ -23,11 +23,18 @@
 </head>
 
 <body>
-  <div id="header"><h1 id="page_title">Speeding analysis at Uusimaa region</h1><div id="slider"></div></div>
+  <div id="header"><h1 id="page_title">Speeding analysis at Uusimaa region</h1><div id="menu"><a id="help_menu" href="">Need help?</a></div><div id="slider"></div></div>
   <div id="map"></div>
   <div id="loader"></div>
+  <div id="help" title="help">Some help text goes here</div>
   
   <script>
+    $( function() {
+        $( "#help" ).dialog({autoOpen: false});
+    } );
+    
+    $('#help_menu').click( function(e) {e.preventDefault(); $( "#help" ).dialog("open"); return false; } )
+      
     var selectedDate = moment("2015 1", "YYYY DDD");
     
     var bounds, crsName, crsOpts, originNw, projDef, zoomLevels;
@@ -60,22 +67,46 @@
     map.setView([60.204722, 24.962778], 7);
     
     var charts = {};
+    var trafficData = {};
     function showTrafficInformation( station, date ) {
-        var dayData = trafficData.filter(function (line) {
+        $('#loader').show();
+        
+        if( charts[ station ] ) {
+            showTrafficInformationChart( station, date );
+        } else {
+        
+            $( function() {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', 'data/combined.csv.gz', true);
+                xhr.responseType = 'arraybuffer';
+     
+                xhr.onload = function(e) {
+                    if (this.status == 200) {
+                        trafficData[ station ] = $.csv.toObjects( pako.ungzip( this.response ,{ to: 'string' }) );
+                        
+                        showTrafficInformationChart( station, date );
+                    }
+                };
+     
+                xhr.send();
+            } );
+        }
+    }
+    
+    function showTrafficInformationChart( station, date ) {
+        var dayData = trafficData[ station ].filter(function (line) {
             return line['station_id'] == station &&
             line['year'] == date.year()  &&
             line['day'] == date.dayOfYear();
         });
             
         var totalCars = [];
-        dayData.forEach( function(item){
-            totalCars.push({ y: item['n_cars'], x: moment(item['year'] + " " + item['day'] + " " + item['hour'], 'YYYY DDD hh') })
-        });
-            
         var speeders = [];
         dayData.forEach( function(item){
+            totalCars.push({ y: item['n_cars'], x: moment(item['year'] + " " + item['day'] + " " + item['hour'], 'YYYY DDD hh') })
             speeders.push({ y: item['n_speeding_cars'], x: moment(item['year'] + " " + item['day'] + " " + item['hour'], 'YYYY DDD hh') })
-        });            
+        });
+            
             
         var ctx = document.getElementById('stationChart_' + station).getContext('2d');
         if ( charts['stationChart_'  + station ] ) {
@@ -109,7 +140,8 @@
                 }
             }
         });
-        ctx.height = 200;
+        
+        $('#loader').hide(250);
     }
     
     function onEachLAMPoint(feature, layer) {
@@ -145,10 +177,10 @@
             + "<li>Longitude: " + feature.geometry.coordinates[0] + "</li>"
             +"<li>Point ID: " + feature.id + "</li>"
             +"<li>Prediction result: <b>" + feature.properties.predictionResult + "</b> speeding drivers per hour (both directions combined)</li>" +
-            "<li>Speed limit: " + feature.properties.speedLimit;
+            "<li>Speed limit: " + feature.properties.speedLimit + " km/h";
         
         if ( feature.properties.speedLimit != feature.properties.speedLimitWinter ) {
-            content += " (winter limit: " + feature.properties.speedLimitWinter +")";
+            content += " (winter limit: " + feature.properties.speedLimitWinter +" km/h)";
         }
         content += "</li></ul>";
         
@@ -157,82 +189,84 @@
     
     var prediction_points;
     function loadPredictionDatasetToMap() {
+        $( "#slider" ).prop('disabled', true);
         $('#loader').show();
         
-        var start_time = prediction_times[ selected_prediction_time ];
-        var end_time = start_time.clone().add(1, 'hours');
-        var new_title = "Speeding analysis at Uusimaa region - " + start_time.format("YYYY-MM-DD HH:mm") + " - " + end_time.format("HH:mm");
-        document.title = new_title;
+        $( function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', 'data/predictions/prediction_points_' + selected_prediction_time + '.json.gz', true);
+            xhr.responseType = 'arraybuffer';
+ 
+            xhr.onload = function(e) {
+                if (this.status == 200) {
+                    var prediction_point_data = JSON.parse( pako.ungzip( this.response ,{ to: 'string' }) );
+            
+                    var start_time = prediction_times[ selected_prediction_time ];
+                    var end_time = start_time.clone().add(1, 'hours');
+                    var new_title = "Speeding analysis at Uusimaa region - " + start_time.format("YYYY-MM-DD HH:mm") + " - " + end_time.format("HH:mm");
+                    document.title = new_title;
         
-        if( prediction_points ) {
-            map.removeLayer( prediction_points );
-        }
+                    if( prediction_points ) {
+                        map.removeLayer( prediction_points );
+                    }
         
-        prediction_points = new L.geoJson("", {
-            pointToLayer: function (feature, latlng) {
-                var predictionPointMarkerOptions = {
-                    radius: 2 + Math.log2( feature.properties.predictionResult ),
-                    fillColor: feature.properties.predictionResultColor,
-                    color: "#000",
-                    weight: 1,
-                    opacity: 1,
-                    fillOpacity: 0.8
-                };
-                return L.circleMarker(latlng, predictionPointMarkerOptions);
-            },
-            onEachFeature: onEachPredictionPoint
-        });
-        prediction_points.addTo(map);
+                    prediction_points = new L.geoJson("", {
+                        pointToLayer: function (feature, latlng) {
+                            var predictionPointMarkerOptions = {
+                                radius: 2 + Math.log2( feature.properties.predictionResult ),
+                                fillColor: feature.properties.predictionResultColor,
+                                color: "#000",
+                                weight: 1,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            };
+                            return L.circleMarker(latlng, predictionPointMarkerOptions);
+                        },
+                        onEachFeature: onEachPredictionPoint
+                    });
+                    prediction_points.addTo(map);
         
-        $(prediction_point_datasets[ selected_prediction_time ].features).each(function(key, data) {
-            prediction_points.addData(data);
-        });
+                    $(prediction_point_data.features).each(function(key, data) {
+                        prediction_points.addData(data);
+                    });
         
-        $('#page_title').html( new_title );
-        $('#loader').hide(250);
+                    $('#page_title').html( new_title );
+                    $('#loader').hide(250);
+                    $( "#slider" ).prop('disabled', false);
+                }
+            };
+ 
+            xhr.send();
+        } );
+        
     };
-    
     
 
     var selected_prediction_time;
-    var prediction_point_datasets = [];
     var prediction_times = [];
-    var prediction_point_data;
     
-    $( function() {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', 'data/prediction_points_updated2.json.gz', true);
-        xhr.responseType = 'arraybuffer';
- 
-        xhr.onload = function(e) {
-            if (this.status == 200) {
-                prediction_point_data = JSON.parse( pako.ungzip( this.response ,{ to: 'string' }) );
-            
-                prediction_times = prediction_point_data.prediction_times;
-                for (i = 0; i < prediction_times.length; i++ ) {
-                    prediction_times[i] = moment(prediction_times[i], "YYYY-MM-DD HH:mm:ss ZZ");
-                }
-            
-                prediction_point_datasets = prediction_point_data.datasets;
-            
-                selected_prediction_time = 0;
-            
-                $( "#slider" ).slider({
-                    min: 0, 
-                    max: prediction_times.length - 1,
-                    change: function(event, ui ) {
-                        selected_prediction_time = ui.value;
-                        loadPredictionDatasetToMap();
-                    }
-                });
-            
-                loadPredictionDatasetToMap();
-            }
-        };
- 
-        xhr.send();
-    } );
+    $.ajax({
+        dataType: "json",
+        url: "data/prediction_times.json",
+        success: function(data) {
+            $(data).each(function(key, data) {
+                prediction_times.push( moment(data, "YYYY-MM-DD HH:mm:ss ZZ") );
+            });
+            selected_prediction_time = 0;
 
+            $( "#slider" ).slider({
+                min: 0, 
+                max: prediction_times.length - 1,
+                change: function(event, ui ) {
+                    selected_prediction_time = ui.value;
+                    loadPredictionDatasetToMap();
+                }
+            });
+            
+            loadPredictionDatasetToMap();
+        }
+	});
+    
     var lam_points = new L.geoJson("", {onEachFeature: onEachLAMPoint});
 	lam_points.addTo(map);
 
@@ -245,22 +279,7 @@
             });
         }
 	});
-    
-    var trafficData = [];
-    $( function() {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', 'data/combined.csv.gz', true);
-        xhr.responseType = 'arraybuffer';
- 
-        xhr.onload = function(e) {
-            if (this.status == 200) {
-                trafficData = $.csv.toObjects( pako.ungzip( this.response ,{ to: 'string' }) );
-            }
-        };
- 
-        xhr.send();
-    } );
-    
+        
   </script>
 </body>
 </html>

@@ -44,5 +44,9 @@ for timestamp in dataset2['prediction_times']:
                 break
     dataset2['datasets'].append( temp_prediction_times )
 
-with open('../map-viewer/data/prediction_points_updated2.json', 'w') as outfile:
-    json.dump(dataset2, outfile )
+with open('../map-viewer/data/prediction_times.json', 'w') as outfile:
+        json.dump(dataset2['prediction_times'], outfile )
+
+for i in range(0, len( dataset2['prediction_times'] ) ):
+    with open('../map-viewer/data/prediction_points_' + str(i) +'.json', 'w') as outfile:
+        json.dump(dataset2['datasets'][i], outfile )
