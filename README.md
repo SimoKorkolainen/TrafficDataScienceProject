@@ -7,14 +7,27 @@ Actual data management and analysis have been done with [Python 3](https://www.p
 ## Data sources
 
 * Finnish transport agency
-** [TMS Data](https://www.liikennevirasto.fi/web/en/open-data/materials/tms-data)
-** License [CC-BY 4.0](http://creativecommons.org/licenses/by/4.0/)
+  * [TMS Data](https://www.liikennevirasto.fi/web/en/open-data/materials/tms-data)
+  * License [CC-BY 4.0](http://creativecommons.org/licenses/by/4.0/)
 * Finnish transport agency
-** [Road shape information](https://aineistot.liikennevirasto.fi/digiroad/latest/Maakuntajako_DIGIROAD_K_EUREF-FIN/)
-** License [CC-BY 4.0](http://creativecommons.org/licenses/by/4.0/)
+  * [Road shape information](https://aineistot.liikennevirasto.fi/digiroad/latest/Maakuntajako_DIGIROAD_K_EUREF-FIN/)
+  * License [CC-BY 4.0](http://creativecommons.org/licenses/by/4.0/)
 *  National Land Survey of Finland
-** [Raster map files](https://www.maanmittauslaitos.fi/asioi-verkossa/avoimien-aineistojen-tiedostopalvelu)
-** License [CC-BY 4.0](http://creativecommons.org/licenses/by/4.0/)
+  * [Raster map files](https://www.maanmittauslaitos.fi/asioi-verkossa/avoimien-aineistojen-tiedostopalvelu)
+  * License [CC-BY 4.0](http://creativecommons.org/licenses/by/4.0/)
 * Finnish Meteorological Institute
-** [Open Weather Data](https://en.ilmatieteenlaitos.fi/open-data)
-** License [CC-BY 4.0](http://creativecommons.org/licenses/by/4.0/)
+  * [Open Weather Data](https://en.ilmatieteenlaitos.fi/open-data)
+  * License [CC-BY 4.0](http://creativecommons.org/licenses/by/4.0/)
+  
+## Libraries used for map viewer
+
+All libraries are used unmodified.
+
+* [Leaflet](https://leafletjs.com/)
+* [Proj4Leaflet](https://kartena.github.io/Proj4Leaflet/)
+* [jQuery](https://jquery.com/)
+* [jquery UI](https://jqueryui.com/)
+* [jQuery CSV](https://github.com/evanplaice/jquery-csv)
+* [Moment.js](https://momentjs.com/)
+* [Chart.js](http://www.chartjs.org/)
+* [pako](https://github.com/nodeca/pako)
