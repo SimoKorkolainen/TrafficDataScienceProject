@@ -12,7 +12,7 @@ Actual data management and analysis have been done with [Python 3](https://www.p
 * Finnish transport agency
   * [Road shape information](https://aineistot.liikennevirasto.fi/digiroad/latest/Maakuntajako_DIGIROAD_K_EUREF-FIN/)
   * License [CC-BY 4.0](http://creativecommons.org/licenses/by/4.0/)
-*  National Land Survey of Finland
+* National Land Survey of Finland
   * [Raster map files](https://www.maanmittauslaitos.fi/asioi-verkossa/avoimien-aineistojen-tiedostopalvelu)
   * License [CC-BY 4.0](http://creativecommons.org/licenses/by/4.0/)
 * Finnish Meteorological Institute
